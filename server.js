@@ -11,6 +11,7 @@ const path = require('path');
 const { enqueueJob, queueLength } = require('./src/lib/queue');
 const { getSettings, saveSettings } = require('./src/lib/settings');
 const { buildEmail } = require('./src/lib/template');
+const { setAuthCookie, clearAuthCookie, isAuthed, checkPassword } = require('./src/lib/auth');
 const { runOnce } = require('./worker');
 
 const PORT = process.env.PORT || 8080;
@@ -87,6 +88,37 @@ const server = http.createServer(async (req, res) => {
       return res.end(JSON.stringify({ queued: true, id: job.id }));
     }
 
+    // Authentication endpoints
+    if (req.method === 'POST' && url.pathname === '/api/login') {
+      const body = await readJsonBody(req);
+      const pass = (body && body.password) || '';
+      if (checkPassword(pass)) {
+        setAuthCookie(res);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ ok: true }));
+      }
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: 'Invalid credentials' }));
+    }
+    if (req.method === 'POST' && url.pathname === '/api/logout') {
+      clearAuthCookie(res);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ ok: true }));
+    }
+    if (req.method === 'GET' && url.pathname === '/api/me') {
+      const authed = isAuthed(req);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ authed }));
+    }
+
+    // Protect API routes (except public ones)
+    const isApi = url.pathname.startsWith('/api/');
+    const publicApi = ['/api/login', '/api/me'].includes(url.pathname);
+    if (isApi && !publicApi && !isAuthed(req)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: 'Unauthorized' }));
+    }
+
     // Settings API
     if (req.method === 'GET' && url.pathname === '/api/settings') {
       const s = await getSettings();
@@ -122,8 +154,12 @@ const server = http.createServer(async (req, res) => {
       return res.end(JSON.stringify(result));
     }
 
-    // Admin UI static files
+    // Admin UI static files (gate: redirect to login if not authed)
     if (req.method === 'GET' && (url.pathname === '/admin' || url.pathname.startsWith('/admin/'))) {
+      if (!isAuthed(req) && url.pathname !== '/admin/login') {
+        // Serve login page
+        return serveStatic(req, res, path.join(__dirname, 'public', 'admin'), '/login.html');
+      }
       const rel = url.pathname === '/admin' ? '/index.html' : url.pathname.replace('/admin', '');
       return serveStatic(req, res, path.join(__dirname, 'public', 'admin'), rel);
     }
