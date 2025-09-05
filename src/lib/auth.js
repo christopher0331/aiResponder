@@ -24,7 +24,7 @@ function unsign(signed) {
 
 function setAuthCookie(res) {
   const token = sign('admin');
-  const cookie = `ai_admin=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 12}`; // 12h
+  const cookie = `ai_admin=${token}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${60 * 60 * 12}`; // 12h
   res.setHeader('Set-Cookie', cookie);
 }
 

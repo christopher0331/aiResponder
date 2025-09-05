@@ -146,9 +146,27 @@ function Queue() {
 
 function App() {
   const [tab, setTab] = useState('Profile');
+  useEffect(() => {
+    fetch('/api/me').then(r=>r.json()).then(j=>{
+      if (!j.authed) {
+        window.location.href = '/admin/login';
+      }
+    }).catch(()=>{
+      window.location.href = '/admin/login';
+    });
+  }, []);
+
+  const logout = async () => {
+    await fetch('/api/logout', { method: 'POST' });
+    window.location.href = '/admin/login';
+  };
+
   return (
     <div className="container">
-      <h1>AI Replies Settings</h1>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+        <h1>AI Replies Settings</h1>
+        <button className="secondary" onClick={logout}>Logout</button>
+      </div>
       <Tabs tab={tab} setTab={setTab} />
       {tab === 'Profile' && <Profile />}
       {tab === 'Tester' && <Tester />}
