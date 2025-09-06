@@ -1,3 +1,44 @@
+// Security tab: manage admin password stored in settings
+function Security() {
+  const [settings, setSettings] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  useEffect(()=>{ fetch('/api/settings').then(r=>r.json()).then(setSettings); },[]);
+  if(!settings) return <div className="card">Loading…</div>;
+  const update = (k,v)=> setSettings(s=>({ ...s, [k]: v }));
+  const save = async () => {
+    setSaving(true);
+    const res = await fetch('/api/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(settings) });
+    const j = await res.json();
+    setSettings(j);
+    setSaving(false);
+    setJustSaved(true);
+    setTimeout(()=>setJustSaved(false), 1600);
+  };
+  return (
+    <div className="card">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <h2>Security</h2>
+        {justSaved && <span className="badge success flash">Saved</span>}
+      </div>
+      <div className="row">
+        <div className="col">
+          <label>Admin Password (stored in settings)</label>
+          <div className="input-group">
+            <input type={showPw ? 'text' : 'password'} value={settings.adminPassword||''} onChange={e=>update('adminPassword', e.target.value)} placeholder="Set an admin password" autoComplete="new-password" />
+            <button type="button" className="right-btn" onClick={()=>setShowPw(s=>!s)} title={showPw?'Hide':'Show'}>{showPw?'🙈':'👁️'}</button>
+          </div>
+          <div className="small muted" style={{marginTop:4}}>Minimal security: stored in DB as plain text for now.</div>
+        </div>
+      </div>
+      <div style={{display:'flex', gap:8, alignItems:'center', marginTop:12}}>
+        <button onClick={()=>save()} disabled={saving}>{saving ? 'Saving…' : 'Save Password'}</button>
+        {justSaved && <span className="badge success flash">Saved</span>}
+      </div>
+    </div>
+  );
+}
 function Outbox() {
   const [items, setItems] = useState([]);
   const [offset, setOffset] = useState(0);
@@ -79,7 +120,7 @@ function Outbox() {
 const { useState, useEffect } = React;
 
 function Tabs({ tab, setTab }) {
-  const tabs = ['Profile', 'Tester', 'Queue', 'Rules', 'Outbox', 'Logs'];
+  const tabs = ['Profile', 'Tester', 'Queue', 'Rules', 'Outbox', 'Logs', 'Security'];
   return (
     <div className="tabs">
       {tabs.map((t) => (
@@ -337,16 +378,7 @@ function Profile() {
         </div>
       </div>
 
-      <div className="row">
-        <div className="col">
-          <label>Admin Password (stored in settings)</label>
-          <div className="input-group">
-            <input type={showPw ? 'text' : 'password'} value={settings.adminPassword||''} onChange={e=>update('adminPassword', e.target.value)} placeholder="Set an admin password" autoComplete="new-password" />
-            <button type="button" className="right-btn" onClick={()=>setShowPw(s=>!s)} title={showPw?'Hide':'Show'}>{showPw?'🙈':'👁️'}</button>
-          </div>
-          <div className="small muted" style={{marginTop:4}}>Minimal security: stored in DB as plain text for now.</div>
-        </div>
-      </div>
+      {/* Admin password moved to Security tab */}
 
       <div className="row">
         <div className="col">
@@ -695,6 +727,7 @@ function App() {
       {tab === 'Rules' && <Sections />}
       {tab === 'Outbox' && <Outbox />}
       {tab === 'Logs' && <Logs />}
+      {tab === 'Security' && <Security />}
     </div>
   );
 }
