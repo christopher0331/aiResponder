@@ -6,6 +6,7 @@
 
 const http = require('http');
 const { URL } = require('url');
+const querystring = require('querystring');
 const fs = require('fs');
 const path = require('path');
 const { enqueueJob, queueLength } = require('./src/lib/queue');
@@ -17,7 +18,7 @@ const { runOnce } = require('./worker');
 
 const PORT = process.env.PORT || 8080;
 
-function readJsonBody(req) {
+function readBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
     req.on('data', (chunk) => {
@@ -28,9 +29,21 @@ function readJsonBody(req) {
       }
     });
     req.on('end', () => {
+      const ctype = (req.headers['content-type'] || '').split(';')[0].trim();
+      const out = { raw: data, type: ctype, body: null };
       try {
-        const json = data ? JSON.parse(data) : {};
-        resolve(json);
+        if (!data) {
+          out.body = {};
+        } else if (ctype === 'application/json') {
+          out.body = JSON.parse(data);
+        } else if (ctype === 'application/x-www-form-urlencoded') {
+          out.body = querystring.parse(data);
+        } else {
+          // Fallback: try JSON first, else ignore
+          try { out.body = JSON.parse(data); }
+          catch { out.body = { _raw: data }; }
+        }
+        resolve(out);
       } catch (e) {
         reject(e);
       }
@@ -70,13 +83,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    // Request start log
+    await logEvent('http.request', { method: req.method, path: url.pathname });
     if (req.method === 'GET' && url.pathname === '/healthz') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ ok: true }));
     }
 
     if (req.method === 'POST' && url.pathname === '/intake') {
-      const payload = await readJsonBody(req);
+      const parsed = await readBody(req);
+      const payload = parsed.body || {};
       // minimal validation
       const now = Date.now();
       const job = {
@@ -84,7 +100,7 @@ const server = http.createServer(async (req, res) => {
         receivedAt: now,
         form: payload || {},
       };
-      await logEvent('intake.received', { id: job.id, from: job.form?.email || null, subject: job.form?.subject || null });
+      await logEvent('intake.received', { id: job.id, ctype: parsed.type, from: job.form?.email || null, subject: job.form?.subject || null });
       await enqueueJob(job);
       await logEvent('queue.enqueued', { id: job.id });
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -93,7 +109,7 @@ const server = http.createServer(async (req, res) => {
 
     // Authentication endpoints
     if (req.method === 'POST' && url.pathname === '/api/login') {
-      const body = await readJsonBody(req);
+      const { body } = await readBody(req);
       const pass = (body && body.password) || '';
       if (checkPassword(pass)) {
         setAuthCookie(res);
@@ -129,7 +145,7 @@ const server = http.createServer(async (req, res) => {
       return res.end(JSON.stringify(s));
     }
     if (req.method === 'POST' && url.pathname === '/api/settings') {
-      const body = await readJsonBody(req);
+      const { body } = await readBody(req);
       const s = await saveSettings(body || {});
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify(s));
@@ -144,7 +160,7 @@ const server = http.createServer(async (req, res) => {
 
     // Tester: returns preview built from settings + provided form (no send)
     if (req.method === 'POST' && url.pathname === '/api/tester') {
-      const body = await readJsonBody(req);
+      const { body } = await readBody(req);
       const settings = await getSettings();
       const preview = buildEmail({ settings, job: { form: body || {} } });
       await logEvent('tester.preview', { to: preview.toEmail, subject: preview.subject });
@@ -182,6 +198,7 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify({ error: 'Not found' }));
   } catch (err) {
     console.error('Error:', err);
+    try { await logEvent('http.error', { message: String(err && err.message || err) }); } catch {}
     res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Internal error' }));
   }
