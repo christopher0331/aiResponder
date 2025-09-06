@@ -96,6 +96,7 @@ function Sections() {
   const [settings, setSettings] = useState(null);
   const [saving, setSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+  const [idx, setIdx] = useState(0);
 
   useEffect(() => {
     fetch('/api/settings').then(r=>r.json()).then((s)=>{
@@ -105,6 +106,7 @@ function Sections() {
         keywordsText: Array.isArray(sec.keywords) ? sec.keywords.join(', ') : (sec.keywordsText || ''),
       })) : [];
       setSettings({ ...s, sections: secs });
+      setIdx(0);
     });
   }, []);
 
@@ -116,13 +118,15 @@ function Sections() {
     const next = sections.map((s,i)=> i===idx ? { ...s, ...patch } : s);
     setSettings(s=>({ ...s, sections: next }));
   };
-  const removeSection = (idx) => {
-    const next = sections.filter((_,i)=>i!==idx);
+  const removeSection = (i) => {
+    const next = sections.filter((_,j)=>j!==i);
     setSettings(s=>({ ...s, sections: next }));
+    setIdx(Math.max(0, i-1));
   };
   const addSection = () => {
     const next = sections.concat([{ name:'', keywords:[], priority:0, instructions:'', enabled: true }]);
     setSettings(s=>({ ...s, sections: next }));
+    setIdx(next.length - 1);
   };
   const save = async () => {
     setSaving(true);
@@ -162,52 +166,66 @@ function Sections() {
         </div>
       </div>
 
+      {/* Rule tabs */}
+      <div className="tabbar" style={{marginTop:8}}>
+        {sections.map((s, i) => (
+          <div key={i} className={`tab ${i===idx ? 'active' : ''}`} onClick={()=>setIdx(i)}>
+            <span style={{maxWidth:180, overflow:'hidden', textOverflow:'ellipsis'}}>{s.name || `Rule ${i+1}`}</span>
+            <button className="close" title="Close" onClick={(e)=>{ e.stopPropagation(); if (sections.length>1) removeSection(i); }}>&times;</button>
+          </div>
+        ))}
+        <div className="tab add" title="New Rule" onClick={addSection}>+ New</div>
+      </div>
+
       {sections.length === 0 && (<div className="small">No rules yet. Click "Add Rule" to create your first one.</div>)}
 
-      {sections.map((sec, idx) => (
-        <div key={idx} className="card" style={{marginTop:12}}>
-          <div className="row">
-            <div className="col">
-              <label>Name</label>
-              <input value={sec.name||''} onChange={e=>updateSection(idx,{ name: e.target.value })} placeholder="Repairs" />
-            </div>
-            <div className="col">
-              <label>Priority</label>
-              <input type="number" value={Number(sec.priority||0)} onChange={e=>updateSection(idx,{ priority: Number(e.target.value) })} />
-            </div>
-            <div className="col">
-              <label className="small" style={{opacity:0.9}}>Enabled</label>
-              <div className="controls">
-                <input className="bigcheck" type="checkbox" checked={sec.enabled !== false} onChange={e=>updateSection(idx,{ enabled: e.target.checked })} />
-                <span className={`badge indicator ${sec.enabled !== false ? 'success' : 'danger'}`}>{sec.enabled !== false ? 'ON' : 'OFF'}</span>
+      {sections.length > 0 && (()=>{
+        const sec = sections[idx] || {};
+        return (
+          <div className="card" style={{marginTop:12}}>
+            <div className="row">
+              <div className="col">
+                <label>Name</label>
+                <input value={sec.name||''} onChange={e=>updateSection(idx,{ name: e.target.value })} placeholder="Repairs" />
+              </div>
+              <div className="col">
+                <label>Priority</label>
+                <input type="number" value={Number(sec.priority||0)} onChange={e=>updateSection(idx,{ priority: Number(e.target.value) })} />
+              </div>
+              <div className="col">
+                <label className="small" style={{opacity:0.9}}>Enabled</label>
+                <div className="controls">
+                  <input className="bigcheck" type="checkbox" checked={sec.enabled !== false} onChange={e=>updateSection(idx,{ enabled: e.target.checked })} />
+                  <span className={`badge indicator ${sec.enabled !== false ? 'success' : 'danger'}`}>{sec.enabled !== false ? 'ON' : 'OFF'}</span>
+                </div>
+              </div>
+              <div className="col">
+                <label>Delay (seconds)</label>
+                <input type="number" value={Number(sec.delaySeconds||0)} onChange={e=>updateSection(idx,{ delaySeconds: Number(e.target.value) })} placeholder="e.g. 120" />
               </div>
             </div>
-            <div className="col">
-              <label>Delay (seconds)</label>
-              <input type="number" value={Number(sec.delaySeconds||0)} onChange={e=>updateSection(idx,{ delaySeconds: Number(e.target.value) })} placeholder="e.g. 120" />
+            <div className="row">
+              <div className="col">
+                <label>Keywords (comma-separated)</label>
+                <input
+                  value={sec.keywordsText||''}
+                  onChange={e=>updateSection(idx,{ keywordsText: e.target.value })}
+                  placeholder="repair, broken, fix"
+                />
+              </div>
+            </div>
+            <div className="row">
+              <div className="col">
+                <label>Instructions</label>
+                <textarea value={sec.instructions||''} onChange={e=>updateSection(idx,{ instructions: e.target.value })} placeholder="What should AI do when this rule matches?" />
+              </div>
+            </div>
+            <div style={{display:'flex',justifyContent:'flex-end'}}>
+              <button className="danger" onClick={()=>removeSection(idx)}>Delete</button>
             </div>
           </div>
-          <div className="row">
-            <div className="col">
-              <label>Keywords (comma-separated)</label>
-              <input
-                value={sec.keywordsText||''}
-                onChange={e=>updateSection(idx,{ keywordsText: e.target.value })}
-                placeholder="repair, broken, fix"
-              />
-            </div>
-          </div>
-          <div className="row">
-            <div className="col">
-              <label>Instructions</label>
-              <textarea value={sec.instructions||''} onChange={e=>updateSection(idx,{ instructions: e.target.value })} placeholder="What should AI do when this section matches?" />
-            </div>
-          </div>
-          <div style={{display:'flex',justifyContent:'flex-end'}}>
-            <button className="danger" onClick={()=>removeSection(idx)}>Delete</button>
-          </div>
-        </div>
-      ))}
+        );
+      })()}
     </div>
   );
 }
