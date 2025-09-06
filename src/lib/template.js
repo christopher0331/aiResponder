@@ -1,7 +1,8 @@
-// Minimal email template generator (no AI yet)
+// Email template generator with AI integration
 // Uses settings + form payload to produce subject, html, text
+const { generateReply } = require('./ai');
 
-function buildEmail({ settings, job }) {
+async function buildEmail({ settings, job }) {
   const form = job.form || {};
   const name = form.name || form.fullName || '';
   const toEmail = form.email || '';
@@ -10,19 +11,30 @@ function buildEmail({ settings, job }) {
 
   const subject = (settings.subject || 'Thank you for reaching out') + (business ? ` — ${business}` : '');
 
-  const intro = settings.systemInstructions
-    ? settings.systemInstructions.split('\n')[0]
-    : 'We received your message and will get back to you shortly.';
+  // Try AI
+  let aiText = null;
+  try {
+    const ai = await generateReply({ form, settings });
+    aiText = ai && ai.bodyText ? ai.bodyText : null;
+  } catch {}
 
-  // Keep body short per maxSentences. For MVP, just 1-2 short lines.
-  const lines = [];
-  lines.push(`Hi${name ? ' ' + name : ''},`);
-  lines.push(intro);
-  if (userSubject) lines.push(`Re: ${userSubject}`);
-  if (settings.signature) lines.push('', settings.signature);
+  let bodyText;
+  if (aiText) {
+    bodyText = aiText;
+  } else {
+    const intro = settings.systemInstructions
+      ? settings.systemInstructions.split('\n')[0]
+      : 'We received your message and will get back to you shortly.';
+    const lines = [];
+    lines.push(`Hi${name ? ' ' + name : ''},`);
+    lines.push(intro);
+    if (userSubject) lines.push(`Re: ${userSubject}`);
+    bodyText = lines.join('\n');
+  }
+  if (settings.signature) bodyText += `\n\n${settings.signature}`;
 
-  const text = lines.join('\n');
-  const html = `<div style="font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height:1.5; color:#111">\n<p>Hi${name ? ' ' + escapeHtml(name) : ''},</p>\n<p>${escapeHtml(intro)}</p>\n${userSubject ? `<p><strong>Re:</strong> ${escapeHtml(userSubject)}</p>` : ''}\n${settings.signature ? `<p style="margin-top:16px;">${escapeHtml(settings.signature)}</p>` : ''}\n</div>`;
+  const text = bodyText;
+  const html = `<div style="font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height:1.5; color:#111">\n<p>Hi${name ? ' ' + escapeHtml(name) : ''},</p>\n<p>${escapeHtml(bodyText)}</p>\n</div>`;
 
   return { toEmail, subject, html, text };
 }

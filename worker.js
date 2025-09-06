@@ -19,7 +19,7 @@ async function processOne() {
     return { processed: 0, skipped: true, reason: 'disabled' };
   }
 
-  const mail = buildEmail({ settings, job });
+  const mail = await buildEmail({ settings, job });
   if (!mail.toEmail) {
     await logEvent('worker.skip.no_to', { id: job.id });
     return { processed: 0, skipped: true, reason: 'no toEmail' };
