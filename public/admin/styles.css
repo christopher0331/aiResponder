@@ -41,6 +41,7 @@ button.secondary{background:#2a3144}
 .tab.add{background:#223052;border-style:dashed}
 .table{width:100%;border-collapse:collapse}
 .table th,.table td{border-bottom:1px solid #232a3b;padding:8px 6px;text-align:left}
+.table-wrap{width:100%;overflow-x:auto}
 .small{font-size:12px;opacity:.8}
 
 @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
@@ -51,3 +52,20 @@ button.secondary{background:#2a3144}
 .status{margin-top:8px;padding:10px 12px;border-radius:8px;border:1px solid #2a3144;background:#0f1219;display:inline-block}
 .status.enabled{border-color:#285e61;background:#0f1a19;color:#c6f6d5}
 .status.disabled{border-color:#553c3c;background:#1a1010;color:#fed7d7}
+
+/* Button bars wrap on small screens */
+.btnbar{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Responsive tweaks */
+@media (max-width: 640px){
+  .container{padding:0 12px;margin:20px auto}
+  .card{padding:12px}
+  h1{font-size:22px}
+  h2{font-size:18px}
+  .row .col{flex:1 1 100%}
+  button{padding:10px 12px}
+  .tabs{gap:6px}
+  .tabs button{padding:8px 10px;font-size:12px}
+  .tab{padding:6px 10px}
+  .input-group input{padding-left:32px}
+}

@@ -26,7 +26,7 @@ function Outbox() {
     <div className="card">
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <h2>Outbox</h2>
-        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+        <div className="btnbar" style={{alignItems:'center'}}>
           <label className="small">Page Size</label>
           <select value={limit} onChange={(e)=>fetchPage(0, Number(e.target.value))}>
             <option value={10}>10</option>
@@ -68,7 +68,7 @@ function Outbox() {
         </div>
       ))}
 
-      <div style={{display:'flex',justifyContent:'space-between',marginTop:12}}>
+      <div className="btnbar" style={{justifyContent:'space-between',marginTop:12}}>
         <button className="secondary" onClick={prev} disabled={loading || offset===0}>Prev</button>
         <div className="small">Offset {offset} • Showing {items.length}</div>
         <button onClick={next} disabled={loading || items.length < limit}>Next</button>
@@ -238,21 +238,23 @@ function Logs() {
         <h2>Logs</h2>
         <button className="secondary" onClick={fetchLogs}>{loading ? 'Refreshing…' : 'Refresh'}</button>
       </div>
-      <table className="table">
-        <thead>
-          <tr><th>Time</th><th>Type</th><th>Data</th></tr>
-        </thead>
-        <tbody>
-          {logs.map((l, i) => (
-            <tr key={i}>
-              <td className="small">{l.ts ? new Date(l.ts).toLocaleString() : ''}</td>
-              <td>{l.type}</td>
-              <td className="small"><pre style={{whiteSpace:'pre-wrap',margin:0}}>{JSON.stringify(l.data, null, 2)}</pre></td>
-            </tr>
-          ))}
-          {logs.length === 0 && (<tr><td className="small" colSpan="3">No logs yet.</td></tr>)}
-        </tbody>
-      </table>
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr><th>Time</th><th>Type</th><th>Data</th></tr>
+          </thead>
+          <tbody>
+            {logs.map((l, i) => (
+              <tr key={i}>
+                <td className="small">{l.ts ? new Date(l.ts).toLocaleString() : ''}</td>
+                <td>{l.type}</td>
+                <td className="small"><pre style={{whiteSpace:'pre-wrap',margin:0}}>{JSON.stringify(l.data, null, 2)}</pre></td>
+              </tr>
+            ))}
+            {logs.length === 0 && (<tr><td className="small" colSpan="3">No logs yet.</td></tr>)}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
