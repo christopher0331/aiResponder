@@ -27,7 +27,20 @@ function Security() {
           <label>Admin Password (stored in settings)</label>
           <div className="input-group">
             <input type={showPw ? 'text' : 'password'} value={settings.adminPassword||''} onChange={e=>update('adminPassword', e.target.value)} placeholder="Set an admin password" autoComplete="new-password" />
-            <button type="button" className="right-btn" onClick={()=>setShowPw(s=>!s)} title={showPw?'Hide':'Show'}>{showPw?'🙈':'👁️'}</button>
+            <button type="button" className="right-btn" onClick={()=>setShowPw(s=>!s)} title={showPw?'Hide password':'Show password'} aria-label={showPw?'Hide password':'Show password'}>
+              {!showPw && (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+                </svg>
+              )}
+              {showPw && (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M10.58 10.58A3 3 0 0012 15a3 3 0 002.42-4.42M9.88 5.09A10.43 10.43 0 0112 5c6.5 0 10 6 10 6a18.76 18.76 0 01-3.16 3.62M6.11 6.11A18.76 18.76 0 002 11s3.5 6 10 6a10.9 10.9 0 004.06-.76" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
           </div>
           <div className="small muted" style={{marginTop:4}}>Minimal security: stored in DB as plain text for now.</div>
         </div>
