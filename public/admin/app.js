@@ -93,8 +93,11 @@ function Sections() {
               <input type="number" value={Number(sec.priority||0)} onChange={e=>updateSection(idx,{ priority: Number(e.target.value) })} />
             </div>
             <div className="col">
-              <label>Enabled</label>
-              <input type="checkbox" checked={sec.enabled !== false} onChange={e=>updateSection(idx,{ enabled: e.target.checked })} />
+              <label className="small" style={{opacity:0.9}}>Enabled</label>
+              <div className="controls">
+                <input className="bigcheck" type="checkbox" checked={sec.enabled !== false} onChange={e=>updateSection(idx,{ enabled: e.target.checked })} />
+                <span className={`badge indicator ${sec.enabled !== false ? 'success' : 'danger'}`}>{sec.enabled !== false ? 'ON' : 'OFF'}</span>
+              </div>
             </div>
           </div>
           <div className="row">
