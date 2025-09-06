@@ -9,9 +9,10 @@
 label{display:block;font-size:12px;opacity:.8;margin-bottom:6px}
 input,textarea{width:100%;background:#0f1219;border:1px solid #2a3144;color:#eaeef2;border-radius:8px;padding:12px}
 .input-group{position:relative}
-.input-group .left-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.6;font-size:14px}
-.input-group input{padding-left:34px;padding-right:40px}
-.input-group .right-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:#cbd5e1;cursor:pointer;padding:4px;border-radius:6px;line-height:0;height:28px;width:28px;display:flex;align-items:center;justify-content:center}
+.input-group .control{position:relative}
+.input-group .control .left-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.6;font-size:14px}
+.input-group .control input{padding-left:34px;padding-right:40px}
+.input-group .control .right-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:#cbd5e1;cursor:pointer;padding:4px;border-radius:6px;line-height:0;height:28px;width:28px;display:flex;align-items:center;justify-content:center}
 .input-group .right-btn:hover{color:#fff;background:#1b2333}
 .muted{opacity:.75}
 textarea{min-height:120px}
