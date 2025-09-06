@@ -210,8 +210,6 @@ function Profile() {
           <span className={`badge indicator ${settings.enableAutoResponder ? 'success' : 'danger'}`}>
             {settings.enableAutoResponder ? 'ON' : 'OFF'}
           </span>
-          <button className={`secondary ${savingAction==='enable' ? 'loading' : ''}`} disabled={!!settings.enableAutoResponder || saving} onClick={handleEnable}>Enable</button>
-          <button className={`danger ${savingAction==='disable' ? 'loading' : ''}`} disabled={!settings.enableAutoResponder || saving} onClick={handleDisable}>Disable</button>
         </div>
       </div>
       <div className="row">
