@@ -268,6 +268,10 @@ const server = http.createServer(async (req, res) => {
 
     // Admin UI static files (gate: redirect to login if not authed)
     if (req.method === 'GET' && (url.pathname === '/admin' || url.pathname.startsWith('/admin/'))) {
+      // Allow the login stylesheet without auth so the page isn't unstyled
+      if (!isAuthed(req) && url.pathname === '/admin/styles.css') {
+        return serveStatic(req, res, path.join(__dirname, 'public', 'admin'), '/styles.css');
+      }
       if (!isAuthed(req) && url.pathname !== '/admin/login') {
         // Serve login page
         return serveStatic(req, res, path.join(__dirname, 'public', 'admin'), '/login.html');
