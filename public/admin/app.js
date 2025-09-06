@@ -13,6 +13,91 @@ function Tabs({ tab, setTab }) {
   );
 }
 
+// Sections management UI (rules for keyword-based behavior)
+function Sections() {
+  const [settings, setSettings] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings').then(r=>r.json()).then(setSettings);
+  }, []);
+
+  if (!settings) return <div className="card">Loading…</div>;
+
+  const sections = Array.isArray(settings.sections) ? settings.sections : [];
+
+  const updateSection = (idx, patch) => {
+    const next = sections.map((s,i)=> i===idx ? { ...s, ...patch } : s);
+    setSettings(s=>({ ...s, sections: next }));
+  };
+  const removeSection = (idx) => {
+    const next = sections.filter((_,i)=>i!==idx);
+    setSettings(s=>({ ...s, sections: next }));
+  };
+  const addSection = () => {
+    const next = sections.concat([{ name:'', keywords:[], priority:0, instructions:'', enabled: true }]);
+    setSettings(s=>({ ...s, sections: next }));
+  };
+  const save = async () => {
+    setSaving(true);
+    const res = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) });
+    const json = await res.json();
+    setSettings(json); setSaving(false);
+  };
+
+  return (
+    <div className="card">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <h2>Sections</h2>
+        <div style={{display:'flex', gap:8}}>
+          <button className="secondary" onClick={addSection}>Add Section</button>
+          <button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      </div>
+
+      {sections.length === 0 && (<div className="small">No sections yet. Click "Add Section" to create your first rule.</div>)}
+
+      {sections.map((sec, idx) => (
+        <div key={idx} className="card" style={{marginTop:12}}>
+          <div className="row">
+            <div className="col">
+              <label>Name</label>
+              <input value={sec.name||''} onChange={e=>updateSection(idx,{ name: e.target.value })} placeholder="Repairs" />
+            </div>
+            <div className="col">
+              <label>Priority</label>
+              <input type="number" value={Number(sec.priority||0)} onChange={e=>updateSection(idx,{ priority: Number(e.target.value) })} />
+            </div>
+            <div className="col">
+              <label>Enabled</label>
+              <input type="checkbox" checked={sec.enabled !== false} onChange={e=>updateSection(idx,{ enabled: e.target.checked })} />
+            </div>
+          </div>
+          <div className="row">
+            <div className="col">
+              <label>Keywords (comma-separated)</label>
+              <input
+                value={(sec.keywords||[]).join(', ')}
+                onChange={e=>updateSection(idx,{ keywords: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) })}
+                placeholder="repair, broken, fix"
+              />
+            </div>
+          </div>
+          <div className="row">
+            <div className="col">
+              <label>Instructions</label>
+              <textarea value={sec.instructions||''} onChange={e=>updateSection(idx,{ instructions: e.target.value })} placeholder="What should AI do when this section matches?" />
+            </div>
+          </div>
+          <div style={{display:'flex',justifyContent:'flex-end'}}>
+            <button className="danger" onClick={()=>removeSection(idx)}>Delete</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Logs component: fetches /api/logs and displays a table
 function Logs() {
   const [logs, setLogs] = useState([]);
@@ -74,7 +159,13 @@ function Profile() {
   };
   return (
     <div className="card">
-      <h2>AI Replies Settings</h2>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <h2>AI Replies Settings</h2>
+        <div style={{display:'flex',gap:8}}>
+          <button className="secondary" onClick={()=>{ update('enableAutoResponder', true); save(); }}>Enable</button>
+          <button className="danger" onClick={()=>{ update('enableAutoResponder', false); save(); }}>Disable</button>
+        </div>
+      </div>
       <div className="row">
         <div className="col">
           <label>Enable Auto-Responder</label>

@@ -31,6 +31,7 @@ async function generateReply({ form, settings }) {
   let matched = null;
   let matchedScore = -1;
   for (const s of sections) {
+    if (s && s.enabled === false) continue;
     const kws = (s.keywords || []).map((k) => String(k || '').toLowerCase()).filter(Boolean);
     let score = 0;
     for (const k of kws) {
