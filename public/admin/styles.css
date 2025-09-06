@@ -6,11 +6,19 @@
 label{display:block;font-size:12px;opacity:.8;margin-bottom:6px}
 input,textarea{width:100%;background:#0f1219;border:1px solid #2a3144;color:#eaeef2;border-radius:8px;padding:10px}
 textarea{min-height:120px}
-button{background:#2b6cb0;border:0;color:white;border-radius:8px;padding:10px 14px;cursor:pointer}
+button{background:#2b6cb0;border:0;color:white;border-radius:8px;padding:10px 14px;cursor:pointer;transition:transform .06s ease,opacity .2s ease}
+button:active{transform:scale(.98)}
+button[disabled]{opacity:.6;cursor:not-allowed}
+button.loading{position:relative;pointer-events:none}
+button.loading:after{content:"";position:absolute;right:10px;top:50%;width:14px;height:14px;margin-top:-7px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:spin .9s linear infinite}
 button.secondary{background:#2a3144}
+.badge{display:inline-block;background:#243049;border:1px solid #334362;color:#c4d0e3;border-radius:999px;padding:4px 10px;font-size:12px}
+.danger{background:#b02b2b}
 .tabs{display:flex;gap:8px;margin-bottom:12px}
 .tabs button{background:#1b2333}
 .tabs button.active{background:#2b6cb0}
 .table{width:100%;border-collapse:collapse}
 .table th,.table td{border-bottom:1px solid #232a3b;padding:8px 6px;text-align:left}
 .small{font-size:12px;opacity:.8}
+
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
