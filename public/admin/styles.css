@@ -22,3 +22,8 @@ button.secondary{background:#2a3144}
 .small{font-size:12px;opacity:.8}
 
 @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+/* Status box */
+.status{margin-top:8px;padding:10px 12px;border-radius:8px;border:1px solid #2a3144;background:#0f1219;display:inline-block}
+.status.enabled{border-color:#285e61;background:#0f1a19;color:#c6f6d5}
+.status.disabled{border-color:#553c3c;background:#1a1010;color:#fed7d7}
