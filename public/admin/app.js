@@ -1,7 +1,7 @@
 const { useState, useEffect } = React;
 
 function Tabs({ tab, setTab }) {
-  const tabs = ['Profile', 'Tester', 'Queue'];
+  const tabs = ['Profile', 'Tester', 'Queue', 'Logs'];
   return (
     <div className="tabs">
       {tabs.map((t) => (
@@ -171,6 +171,7 @@ function App() {
       {tab === 'Profile' && <Profile />}
       {tab === 'Tester' && <Tester />}
       {tab === 'Queue' && <Queue />}
+      {tab === 'Logs' && <Logs />}
     </div>
   );
 }

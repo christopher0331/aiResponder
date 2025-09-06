@@ -42,4 +42,9 @@ async function rpush(key, value) { return call('rpush', key, value); }
 async function lpop(key) { return call('lpop', key); }
 async function llen(key) { return call('llen', key); }
 
-module.exports = { call, setJson, getJson, rpush, lpop, llen };
+// Additional list helpers for logging
+async function lpush(key, value) { return call('lpush', key, value); }
+async function lrange(key, start, stop) { return call('lrange', key, start, stop); }
+async function ltrim(key, start, stop) { return call('ltrim', key, start, stop); }
+
+module.exports = { call, setJson, getJson, rpush, lpop, llen, lpush, lrange, ltrim };

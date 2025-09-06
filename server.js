@@ -11,6 +11,7 @@ const path = require('path');
 const { enqueueJob, queueLength } = require('./src/lib/queue');
 const { getSettings, saveSettings } = require('./src/lib/settings');
 const { buildEmail } = require('./src/lib/template');
+const { logEvent, fetchLogs } = require('./src/lib/logger');
 const { setAuthCookie, clearAuthCookie, isAuthed, checkPassword } = require('./src/lib/auth');
 const { runOnce } = require('./worker');
 
@@ -83,7 +84,9 @@ const server = http.createServer(async (req, res) => {
         receivedAt: now,
         form: payload || {},
       };
+      await logEvent('intake.received', { id: job.id, from: job.form?.email || null, subject: job.form?.subject || null });
       await enqueueJob(job);
+      await logEvent('queue.enqueued', { id: job.id });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ queued: true, id: job.id }));
     }
@@ -144,14 +147,25 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req);
       const settings = await getSettings();
       const preview = buildEmail({ settings, job: { form: body || {} } });
+      await logEvent('tester.preview', { to: preview.toEmail, subject: preview.subject });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify(preview));
     }
 
     if (req.method === 'POST' && url.pathname === '/api/worker/run') {
+      await logEvent('worker.run.request', {});
       const result = await runOnce();
+      await logEvent('worker.run.result', result);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify(result));
+    }
+
+    // Logs API (auth required)
+    if (req.method === 'GET' && url.pathname === '/api/logs') {
+      const limit = Number(url.searchParams.get('limit') || 200);
+      const logs = await fetchLogs(limit);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ logs }));
     }
 
     // Admin UI static files (gate: redirect to login if not authed)
