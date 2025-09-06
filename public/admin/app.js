@@ -534,7 +534,7 @@ function App() {
       {tab === 'Profile' && <Profile />}
       {tab === 'Tester' && <Tester />}
       {tab === 'Queue' && <Queue />}
-      {tab === 'Sections' && <Sections />}
+      {tab === 'Rules' && <Sections />}
       {tab === 'Outbox' && <Outbox />}
       {tab === 'Logs' && <Logs />}
     </div>
