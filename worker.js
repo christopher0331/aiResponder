@@ -64,6 +64,48 @@ async function processOne() {
         meta: { jobId: job.id },
       });
     } catch {}
+    // Owner notification (if configured)
+    try {
+      const owner = settings.ownerEmail || process.env.OWNER_EMAIL || '';
+      if (owner) {
+        const { matched } = matchSection(job.form || {}, settings);
+        const matchedName = matched && matched.name ? matched.name : '—';
+        const when = new Date().toLocaleString();
+        const details = {
+          jobId: job.id,
+          receivedAt: job.receivedAt ? new Date(job.receivedAt).toLocaleString() : 'unknown',
+          sentAt: when,
+          matchedRule: matchedName,
+          fromEmail: settings.fromEmail || process.env.RESEND_FROM,
+          toEmail: mail.toEmail,
+          subject: mail.subject,
+        };
+        const formPretty = JSON.stringify(job.form || {}, null, 2);
+        const textBody = `AI Responder just handled a message.\n\nDetails:\n${Object.entries(details).map(([k,v])=>`${k}: ${v}`).join('\n')}\n\n--- Original Form Submission ---\n${formPretty}\n\n--- Response (text) ---\n${mail.text}`;
+        const htmlBody = `<div style="font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111;line-height:1.5">
+  <h2 style="margin:0 0 8px 0">AI Responder: Message Handled</h2>
+  <table style="border-collapse:collapse;font-size:14px">
+    ${Object.entries(details).map(([k,v])=>`<tr><td style='padding:4px 8px;color:#555'>${k}</td><td style='padding:4px 8px'><strong>${String(v)}</strong></td></tr>`).join('')}
+  </table>
+  <h3 style="margin:16px 0 6px">Original Form Submission</h3>
+  <pre style="white-space:pre-wrap;background:#f6f8fa;border:1px solid #e5e7eb;border-radius:8px;padding:12px;color:#111">${escapeHtml(formPretty)}</pre>
+  <h3 style="margin:16px 0 6px">Response (HTML Preview)</h3>
+  <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px">${mail.html}</div>
+  <h3 style="margin:16px 0 6px">Response (Text)</h3>
+  <pre style="white-space:pre-wrap;background:#f6f8fa;border:1px solid #e5e7eb;border-radius:8px;padding:12px;color:#111">${escapeHtml(mail.text)}</pre>
+  <div style="margin-top:12px;color:#666;font-size:12px">This is an automated notification sent to ${escapeHtml(owner)}.</div>
+</div>`;
+        await sendEmail({
+          to: owner,
+          subject: `AI Responder sent a reply to ${mail.toEmail}`,
+          text: textBody,
+          html: htmlBody,
+          from: settings.fromEmail || process.env.RESEND_FROM,
+        });
+      }
+    } catch (e) {
+      await logEvent('worker.owner_notify.error', { id: job.id, error: String(e && e.message || e) });
+    }
     await logEvent('worker.send.success', { id: job.id, to: mail.toEmail, subject: mail.subject });
     return { processed: 1, to: mail.toEmail };
   } catch (e) {
