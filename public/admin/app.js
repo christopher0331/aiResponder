@@ -13,6 +13,51 @@ function Tabs({ tab, setTab }) {
   );
 }
 
+// Logs component: fetches /api/logs and displays a table
+function Logs() {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchLogs = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/logs?limit=200');
+      const j = await res.json();
+      setLogs(Array.isArray(j.logs) ? j.logs : []);
+    } catch (e) {
+      console.error('fetch logs error', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchLogs(); }, []);
+
+  return (
+    <div className="card">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <h2>Logs</h2>
+        <button className="secondary" onClick={fetchLogs}>{loading ? 'Refreshing…' : 'Refresh'}</button>
+      </div>
+      <table className="table">
+        <thead>
+          <tr><th>Time</th><th>Type</th><th>Data</th></tr>
+        </thead>
+        <tbody>
+          {logs.map((l, i) => (
+            <tr key={i}>
+              <td className="small">{l.ts ? new Date(l.ts).toLocaleString() : ''}</td>
+              <td>{l.type}</td>
+              <td className="small"><pre style={{whiteSpace:'pre-wrap',margin:0}}>{JSON.stringify(l.data, null, 2)}</pre></td>
+            </tr>
+          ))}
+          {logs.length === 0 && (<tr><td className="small" colSpan="3">No logs yet.</td></tr>)}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function Profile() {
   const [settings, setSettings] = useState(null);
   const [saving, setSaving] = useState(false);
