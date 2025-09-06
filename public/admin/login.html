@@ -16,9 +16,20 @@
 
         <div class="input-group" style="margin-top:12px">
           <label>Password</label>
-          <span class="left-icon">🔒</span>
-          <input id="pw" type="password" placeholder="Your admin password" autocomplete="current-password" />
-          <button id="togglePw" type="button" class="right-btn" aria-label="Show password" title="Show/Hide Password">👁️</button>
+          <div class="control">
+            <span class="left-icon">🔒</span>
+            <input id="pw" type="password" placeholder="Your admin password" autocomplete="current-password" />
+            <button id="togglePw" type="button" class="right-btn" aria-label="Show password" title="Show/Hide Password">
+              <svg id="eyeOpen" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <svg id="eyeClosed" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:none">
+                <path d="M3 3l18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M10.58 10.58A3 3 0 0012 15a3 3 0 002.42-4.42M9.88 5.09A10.43 10.43 0 0112 5c6.5 0 10 6 10 6a18.76 18.76 0 01-3.16 3.62M6.11 6.11A18.76 18.76 0 002 11s3.5 6 10 6a10.9 10.9 0 004.06-.76" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <button id="loginBtn" class="full" style="margin-top:16px">Sign in</button>
@@ -63,7 +74,8 @@
       toggle.addEventListener('click', ()=>{
         const isPw = pw.getAttribute('type') === 'password';
         pw.setAttribute('type', isPw ? 'text' : 'password');
-        toggle.textContent = isPw ? '🙈' : '👁️';
+        document.getElementById('eyeOpen').style.display = isPw ? 'none' : '';
+        document.getElementById('eyeClosed').style.display = isPw ? '' : 'none';
       });
     </script>
   </body>
