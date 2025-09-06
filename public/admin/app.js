@@ -57,7 +57,7 @@ function Outbox() {
               <div className="small">{m.sentAt ? new Date(m.sentAt).toLocaleString() : ''}</div>
             </div>
             <div className="col">
-              <div className="small">Section</div>
+              <div className="small">Rule</div>
               <span className={`badge ${m.section ? 'success' : 'secondary'}`}>{m.section || '—'}</span>
             </div>
           </div>
@@ -79,7 +79,7 @@ function Outbox() {
 const { useState, useEffect } = React;
 
 function Tabs({ tab, setTab }) {
-  const tabs = ['Profile', 'Tester', 'Queue', 'Sections', 'Outbox', 'Logs'];
+  const tabs = ['Profile', 'Tester', 'Queue', 'Rules', 'Outbox', 'Logs'];
   return (
     <div className="tabs">
       {tabs.map((t) => (
@@ -133,6 +133,7 @@ function Sections() {
         priority: Number(sec.priority || 0),
         enabled: sec.enabled !== false,
         instructions: sec.instructions || '',
+        delaySeconds: Number(sec.delaySeconds || 0),
         keywords: (sec.keywordsText || (Array.isArray(sec.keywords)? sec.keywords.join(', '):''))
           .split(',')
           .map(s=>s.trim())
@@ -150,14 +151,14 @@ function Sections() {
   return (
     <div className="card">
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-        <h2>Sections</h2>
+        <h2>Rules</h2>
         <div style={{display:'flex', gap:8}}>
-          <button className="secondary" onClick={addSection}>Add Section</button>
+          <button className="secondary" onClick={addSection}>Add Rule</button>
           <button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
         </div>
       </div>
 
-      {sections.length === 0 && (<div className="small">No sections yet. Click "Add Section" to create your first rule.</div>)}
+      {sections.length === 0 && (<div className="small">No rules yet. Click "Add Rule" to create your first one.</div>)}
 
       {sections.map((sec, idx) => (
         <div key={idx} className="card" style={{marginTop:12}}>
@@ -176,6 +177,10 @@ function Sections() {
                 <input className="bigcheck" type="checkbox" checked={sec.enabled !== false} onChange={e=>updateSection(idx,{ enabled: e.target.checked })} />
                 <span className={`badge indicator ${sec.enabled !== false ? 'success' : 'danger'}`}>{sec.enabled !== false ? 'ON' : 'OFF'}</span>
               </div>
+            </div>
+            <div className="col">
+              <label>Delay (seconds)</label>
+              <input type="number" value={Number(sec.delaySeconds||0)} onChange={e=>updateSection(idx,{ delaySeconds: Number(e.target.value) })} placeholder="e.g. 120" />
             </div>
           </div>
           <div className="row">
@@ -297,6 +302,10 @@ function Profile() {
         <div className="col">
           <label>From Email</label>
           <input value={settings.fromEmail||''} onChange={e=>update('fromEmail', e.target.value)} placeholder="replies@yourdomain.com" />
+        </div>
+        <div className="col">
+          <label>Default Delay (seconds)</label>
+          <input type="number" value={Number(settings.defaultDelaySeconds||0)} onChange={e=>update('defaultDelaySeconds', Number(e.target.value))} placeholder="e.g. 120" />
         </div>
       </div>
 
@@ -445,7 +454,7 @@ function Tester() {
       <div style={{display:'flex', gap:8}}>
         <button onClick={run} className={loading? 'loading': ''} disabled={loading}>Preview</button>
         {current.preview && <button onClick={sendNow}>Send This Preview</button>}
-        {current.preview && current.preview.matchedSection && <span className="badge">Test with Section: {current.preview.matchedSection}</span>}
+        {current.preview && current.preview.matchedSection && <span className="badge">Test with Rule: {current.preview.matchedSection}</span>}
         {current.preview && <button className="secondary" onClick={()=>setDebugOpen(o=>!o)}>{debugOpen ? 'Hide Prompt' : 'Show Prompt'}</button>}
       </div>
       {current.preview && (

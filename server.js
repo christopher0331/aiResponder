@@ -272,7 +272,12 @@ const server = http.createServer(async (req, res) => {
         // Serve login page
         return serveStatic(req, res, path.join(__dirname, 'public', 'admin'), '/login.html');
       }
-      const rel = url.pathname === '/admin' ? '/index.html' : url.pathname.replace('/admin', '');
+      let rel = '/index.html';
+      if (url.pathname === '/admin/login') {
+        rel = '/login.html';
+      } else if (url.pathname !== '/admin') {
+        rel = url.pathname.replace('/admin', '');
+      }
       return serveStatic(req, res, path.join(__dirname, 'public', 'admin'), rel);
     }
 
