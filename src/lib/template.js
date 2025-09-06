@@ -34,7 +34,7 @@ async function buildEmail({ settings, job }) {
   if (settings.signature) bodyText += `\n\n${settings.signature}`;
 
   const text = bodyText;
-  const html = `<div style="font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height:1.5; color:#eaeef2">\n<p>Hi${name ? ' ' + escapeHtml(name) : ''},</p>\n<p>${escapeHtml(bodyText)}</p>\n</div>`;
+  const html = `<div style="font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height:1.5; color:#111; background:#ffffff">\n<p style="margin:0 0 12px 0;color:#111">Hi${name ? ' ' + escapeHtml(name) : ''},</p>\n<p style="margin:0;color:#111">${escapeHtml(bodyText)}</p>\n</div>`;
 
   return { toEmail, subject, html, text };
 }

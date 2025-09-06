@@ -506,12 +506,33 @@ function Tester() {
 }
 
 function Queue() {
-  const [length, setLength] = useState(0);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [lastRun, setLastRun] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [jobDetail, setJobDetail] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [ruleNames, setRuleNames] = useState([]);
+  const [ruleOverride, setRuleOverride] = useState('');
+
+  const loadRules = async () => {
+    try {
+      const s = await fetch('/api/settings').then(r=>r.json());
+      const names = (s.sections||[]).map(x=>x.name).filter(Boolean);
+      setRuleNames(names);
+    } catch {}
+  };
+
   const refresh = async () => {
-    const res = await fetch('/api/queue');
-    const j = await res.json();
-    setLength(j.length||0);
+    setLoading(true);
+    try {
+      const res = await fetch('/api/queue/items');
+      const j = await res.json();
+      setItems(j.items || []);
+      if (selectedId && !((j.items || []).some(it=>it.id===selectedId))) {
+        setSelectedId(null); setJobDetail(null); setPreview(null);
+      }
+    } finally { setLoading(false); }
   };
   const run = async () => {
     const res = await fetch('/api/worker/run', { method:'POST' });
@@ -519,18 +540,115 @@ function Queue() {
     setLastRun(j);
     refresh();
   };
-  useEffect(()=>{ refresh(); },[]);
+  const loadDetail = async (id) => {
+    setSelectedId(id);
+    setPreview(null);
+    const res = await fetch(`/api/queue/item?id=${encodeURIComponent(id)}`);
+    const j = await res.json();
+    setJobDetail(j.job || null);
+  };
+  const doPreview = async () => {
+    if (!selectedId) return;
+    const res = await fetch('/api/queue/preview', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id: selectedId, ruleName: ruleOverride || undefined }) });
+    const j = await res.json();
+    setPreview(j);
+  };
+  const respond = async () => {
+    if (!selectedId) return;
+    const res = await fetch('/api/queue/respond', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id: selectedId }) });
+    const j = await res.json();
+    if (j && j.ok) { await refresh(); setSelectedId(null); setJobDetail(null); setPreview(null); }
+  };
+  const dequeue = async () => {
+    if (!selectedId) return;
+    const res = await fetch('/api/queue/dequeue', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id: selectedId }) });
+    const j = await res.json();
+    if (j && j.ok) { await refresh(); setSelectedId(null); setJobDetail(null); setPreview(null); }
+  };
+
+  useEffect(()=>{ refresh(); loadRules(); },[]);
+
   return (
     <div className="card">
-      <h2>Queue</h2>
-      <div>Pending: {length}</div>
-      <div style={{display:'flex', gap:8, marginTop:8}}>
-        <button className="secondary" onClick={refresh}>Refresh</button>
-        <button onClick={run}>Run Worker</button>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <h2>Queue</h2>
+        <div className="btnbar">
+          <button className={`secondary ${loading?'loading':''}`} onClick={refresh} disabled={loading}>Refresh</button>
+          <button onClick={run}>Run Worker</button>
+        </div>
       </div>
-      {lastRun && (
-        <div className="small" style={{marginTop:8}}>Processed {lastRun.processed} — Remaining {lastRun.remaining}</div>
-      )}
+      <div className="row">
+        <div className="col">
+          <div className="small">Pending</div>
+          <div style={{fontSize:18,fontWeight:700}}>{items.length}</div>
+          <div style={{marginTop:8, maxHeight:260, overflowY:'auto', border:'1px solid #232a3b', borderRadius:8}}>
+            {items.map((it)=> (
+              <div key={it.id} onClick={()=>loadDetail(it.id)} style={{padding:10, cursor:'pointer', background:selectedId===it.id?'#1b2333':'transparent', borderBottom:'1px solid #232a3b'}}>
+                <div style={{display:'flex', justifyContent:'space-between', gap:8}}>
+                  <div style={{fontWeight:600}}>{it.subject || '(no subject)'}</div>
+                  <div className="small">{it.receivedAt ? new Date(it.receivedAt).toLocaleTimeString() : ''}</div>
+                </div>
+                <div className="small">{it.name} • {it.email}</div>
+              </div>
+            ))}
+            {items.length===0 && <div className="small" style={{padding:10}}>Queue is empty.</div>}
+          </div>
+          {lastRun && (
+            <div className="small" style={{marginTop:8}}>Processed {lastRun.processed} {lastRun.skipped?`(skipped: ${lastRun.skipped})`:''}</div>
+          )}
+        </div>
+        <div className="col">
+          {!jobDetail && <div className="small">Select a queued message to view details and preview.</div>}
+          {jobDetail && (
+            <div>
+              <div className="row">
+                <div className="col">
+                  <label>From</label>
+                  <input value={jobDetail.form?.email || ''} readOnly />
+                </div>
+                <div className="col">
+                  <label>Name</label>
+                  <input value={jobDetail.form?.name || jobDetail.form?.fullName || ''} readOnly />
+                </div>
+              </div>
+              <div className="row">
+                <div className="col">
+                  <label>Subject</label>
+                  <input value={jobDetail.form?.subject || ''} readOnly />
+                </div>
+              </div>
+              <div className="row">
+                <div className="col">
+                  <label>Message</label>
+                  <textarea value={jobDetail.form?.message || ''} readOnly />
+                </div>
+              </div>
+
+              <div className="row">
+                <div className="col">
+                  <label>Rule Override</label>
+                  <select value={ruleOverride} onChange={(e)=>setRuleOverride(e.target.value)}>
+                    <option value="">Auto (best match)</option>
+                    {ruleNames.map(n=> <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="btnbar" style={{marginTop:8}}>
+                <button className="secondary" onClick={doPreview}>Preview</button>
+                <button onClick={respond}>Respond (Send)</button>
+                <button className="danger" onClick={dequeue}>Dequeue (Cancel)</button>
+              </div>
+              {preview && (
+                <div className="card" style={{marginTop:12}}>
+                  <div className="small">Matched Rule: {preview.matchedRule || '—'}</div>
+                  <div><strong>Subject:</strong> {preview.preview?.subject}</div>
+                  <div style={{marginTop:8}} dangerouslySetInnerHTML={{ __html: preview.preview?.html || '' }} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

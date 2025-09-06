@@ -12,6 +12,7 @@ const path = require('path');
 const { enqueueJob, queueLength } = require('./src/lib/queue');
 const { getSettings, saveSettings } = require('./src/lib/settings');
 const { buildEmail } = require('./src/lib/template');
+const { matchSection } = require('./src/lib/ai');
 const { logEvent, fetchLogs } = require('./src/lib/logger');
 const { fetchOutbox } = require('./src/lib/outbox');
 const { lrange, lrem, setJson, getJson } = require('./src/lib/upstash');
@@ -179,6 +180,59 @@ const server = http.createServer(async (req, res) => {
       }).filter(Boolean);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ items }));
+    }
+
+    // Get a single queued item by id (full job including form)
+    if (req.method === 'GET' && url.pathname === '/api/queue/item') {
+      const id = url.searchParams.get('id');
+      const listOut = await lrange(require('./src/lib/queue').QUEUE_KEY, 0, -1);
+      const arr = listOut?.result || [];
+      let job = null;
+      for (const r of arr) {
+        try { const j = JSON.parse(r); if (j && j.id === id) { job = j; break; } } catch {}
+      }
+      if (!job) { res.writeHead(404, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ error: 'not_found' })); }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ job }));
+    }
+
+    // Dequeue (cancel) a specific item by id without sending
+    if (req.method === 'POST' && url.pathname === '/api/queue/dequeue') {
+      const { body } = await readBody(req);
+      const id = body?.id;
+      if (!id) { res.writeHead(400, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ error: 'id required' })); }
+      const listOut = await lrange(require('./src/lib/queue').QUEUE_KEY, 0, -1);
+      const arr = listOut?.result || [];
+      let raw = null;
+      for (const r of arr) { try { const j = JSON.parse(r); if (j && j.id === id) { raw = r; break; } } catch {} }
+      if (!raw) { res.writeHead(404, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ error: 'not_found' })); }
+      await lrem(require('./src/lib/queue').QUEUE_KEY, 1, raw);
+      await logEvent('queue.dequeue', { id });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ ok: true }));
+    }
+
+    // Preview for a single queued item; optional override ruleName to force
+    if (req.method === 'POST' && url.pathname === '/api/queue/preview') {
+      const { body } = await readBody(req);
+      const id = body?.id;
+      const forceRuleName = body?.ruleName;
+      if (!id) { res.writeHead(400, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ error: 'id required' })); }
+      const listOut = await lrange(require('./src/lib/queue').QUEUE_KEY, 0, -1);
+      const arr = listOut?.result || [];
+      let job = null;
+      for (const r of arr) { try { const j = JSON.parse(r); if (j && j.id === id) { job = j; break; } } catch {} }
+      if (!job) { res.writeHead(404, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ error: 'not_found' })); }
+
+      let settings = await getSettings();
+      if (forceRuleName) {
+        const only = (settings.sections || []).map(sec => ({ ...sec, enabled: (sec.name === forceRuleName) }));
+        settings = { ...settings, sections: only };
+      }
+      const preview = await buildEmail({ settings, job });
+      const ms = matchSection(job.form || {}, settings);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ preview, matchedRule: ms.matched ? (ms.matched.name || null) : null }));
     }
 
     // Respond to a single queued item by id (remove from queue and process)
