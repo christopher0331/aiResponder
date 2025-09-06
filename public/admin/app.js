@@ -154,7 +154,7 @@ function Sections() {
         <h2>Rules</h2>
         <div style={{display:'flex', gap:8}}>
           <button className="secondary" onClick={addSection}>Add Rule</button>
-          <button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+          <button onClick={()=>save()} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
         </div>
       </div>
 
@@ -342,7 +342,7 @@ function Profile() {
       </div>
 
       <div style={{display:'flex', gap:8, marginTop:12}}>
-        <button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save Settings'}</button>
+        <button onClick={()=>save()} disabled={saving}>{saving ? 'Saving…' : 'Save Settings'}</button>
       </div>
     </div>
   );
