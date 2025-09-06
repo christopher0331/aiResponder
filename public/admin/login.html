@@ -18,6 +18,7 @@
           <label>Password</label>
           <span class="left-icon">🔒</span>
           <input id="pw" type="password" placeholder="Your admin password" autocomplete="current-password" />
+          <button id="togglePw" type="button" class="right-btn" aria-label="Show password" title="Show/Hide Password">👁️</button>
         </div>
 
         <button id="loginBtn" class="full" style="margin-top:16px">Sign in</button>
@@ -33,6 +34,7 @@
       const pw = document.getElementById('pw');
       const btn = document.getElementById('loginBtn');
       const msg = document.getElementById('msg');
+      const toggle = document.getElementById('togglePw');
 
       async function doLogin(){
         msg.textContent = '';
@@ -57,6 +59,12 @@
       btn.addEventListener('click', doLogin);
       pw.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ doLogin(); }});
       pw.focus();
+
+      toggle.addEventListener('click', ()=>{
+        const isPw = pw.getAttribute('type') === 'password';
+        pw.setAttribute('type', isPw ? 'text' : 'password');
+        toggle.textContent = isPw ? '🙈' : '👁️';
+      });
     </script>
   </body>
   

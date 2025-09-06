@@ -115,7 +115,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/login') {
       const { body } = await readBody(req);
       const pass = (body && body.password) || '';
-      if (checkPassword(pass)) {
+      if (await checkPassword(pass)) {
         setAuthCookie(res);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ ok: true }));

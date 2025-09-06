@@ -282,6 +282,7 @@ function Profile() {
   const [saving, setSaving] = useState(false);
   const [savingAction, setSavingAction] = useState(''); // 'enable' | 'disable' | ''
   const [justSaved, setJustSaved] = useState(false);
+  const [showPw, setShowPw] = useState(false);
   useEffect(() => {
     fetch('/api/settings').then(r=>r.json()).then(setSettings);
   }, []);
@@ -333,6 +334,17 @@ function Profile() {
         <div className="col">
           <label>Default Delay (seconds)</label>
           <input type="number" value={Number(settings.defaultDelaySeconds||0)} onChange={e=>update('defaultDelaySeconds', Number(e.target.value))} placeholder="e.g. 120" />
+        </div>
+      </div>
+
+      <div className="row">
+        <div className="col">
+          <label>Admin Password (stored in settings)</label>
+          <div className="input-group">
+            <input type={showPw ? 'text' : 'password'} value={settings.adminPassword||''} onChange={e=>update('adminPassword', e.target.value)} placeholder="Set an admin password" autoComplete="new-password" />
+            <button type="button" className="right-btn" onClick={()=>setShowPw(s=>!s)} title={showPw?'Hide':'Show'}>{showPw?'🙈':'👁️'}</button>
+          </div>
+          <div className="small muted" style={{marginTop:4}}>Minimal security: stored in DB as plain text for now.</div>
         </div>
       </div>
 

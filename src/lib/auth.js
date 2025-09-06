@@ -1,8 +1,10 @@
 // Simple HMAC-signed cookie auth (no external packages)
+// Password source: settings.adminPassword (stored in DB) or env ADMIN_PASSWORD (fallback)
 // Env: ADMIN_PASSWORD (plaintext for MVP), AUTH_SECRET (for signing)
 
 const crypto = require('crypto');
 
+const { getSettings } = require('./settings');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const AUTH_SECRET = process.env.AUTH_SECRET || (process.env.RESEND_API_KEY ? crypto.createHash('sha256').update(process.env.RESEND_API_KEY).digest('hex') : 'dev-secret');
 
@@ -51,9 +53,18 @@ function parseCookies(req) {
   return out;
 }
 
-function checkPassword(pass) {
-  if (!ADMIN_PASSWORD) return false;
-  return pass === ADMIN_PASSWORD;
+async function checkPassword(pass) {
+  try {
+    const s = await getSettings();
+    const stored = (s && s.adminPassword) ? String(s.adminPassword) : '';
+    const effective = stored || ADMIN_PASSWORD || '';
+    if (!effective) return false;
+    return String(pass) === effective;
+  } catch (e) {
+    // Fallback to env only if settings read failed
+    if (!ADMIN_PASSWORD) return false;
+    return String(pass) === ADMIN_PASSWORD;
+  }
 }
 
 module.exports = { setAuthCookie, clearAuthCookie, isAuthed, checkPassword };
