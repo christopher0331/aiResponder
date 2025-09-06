@@ -303,7 +303,6 @@ function Profile() {
           <span className={`badge indicator ${settings.enableAutoResponder ? 'success' : 'danger'}`}>
             {settings.enableAutoResponder ? 'ON' : 'OFF'}
           </span>
-          {justSaved && <span className="badge success flash">Saved</span>}
         </div>
       </div>
       <div className="row">
@@ -349,8 +348,9 @@ function Profile() {
         </div>
       </div>
 
-      <div style={{display:'flex', gap:8, marginTop:12}}>
+      <div style={{display:'flex', gap:8, alignItems:'center', marginTop:12}}>
         <button onClick={()=>save()} disabled={saving}>{saving ? 'Saving…' : 'Save Settings'}</button>
+        {justSaved && <span className="badge success flash">Saved</span>}
       </div>
     </div>
   );
