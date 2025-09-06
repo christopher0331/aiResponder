@@ -415,16 +415,19 @@ function Tester() {
 
   return (
     <div className="card">
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <h2>Tester</h2>
-        <div style={{display:'flex', gap:8, alignItems:'center'}}>
-          <label className="small">Scenario</label>
-          <select value={idx} onChange={(e)=>setIdx(Number(e.target.value))}>
-            {scenarios.map((s, i)=>(<option key={s.id} value={i}>{s.name}</option>))}
-          </select>
-          <button className="secondary" onClick={addScenario}>Add</button>
-          <button className="secondary" onClick={duplicate}>Duplicate</button>
-          <button className="danger" onClick={remove} disabled={scenarios.length<=1}>Delete</button>
+      <h2 style={{marginBottom:8}}>Tester</h2>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div className="tabs" style={{overflowX:'auto', whiteSpace:'nowrap'}}>
+          {scenarios.map((s, i) => (
+            <button key={s.id} className={i===idx ? 'active' : ''} onClick={()=>setIdx(i)} style={{marginBottom:0}}>
+              {s.name}
+            </button>
+          ))}
+        </div>
+        <div style={{display:'flex', gap:8}}>
+          <button className="secondary" title="Add scenario" onClick={addScenario}>+ Add</button>
+          <button className="secondary" title="Duplicate current" onClick={duplicate}>Duplicate</button>
+          <button className="danger" title="Delete current" onClick={remove} disabled={scenarios.length<=1}>Delete</button>
         </div>
       </div>
 
