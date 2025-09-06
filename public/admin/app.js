@@ -340,36 +340,109 @@ function Profile() {
 }
 
 function Tester() {
-  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
+  // Multiple scenarios persisted to localStorage
+  const STORAGE_KEY = 'air:testers:v1';
+  const emptyForm = { name: '', email: '', subject: '', message: '' };
+  const [scenarios, setScenarios] = useState([{ id: String(Date.now()), name: 'Draft 1', form: { ...emptyForm } }]);
+  const [idx, setIdx] = useState(0);
   const [preview, setPreview] = useState(null);
   const [debugOpen, setDebugOpen] = useState(false);
-  const update = (k,v)=> setForm(s=>({ ...s, [k]: v }));
+  const [loading, setLoading] = useState(false);
+
+  // Load from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length) {
+          setScenarios(arr);
+          setIdx(0);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Save to localStorage on change
+  const persist = (arr) => {
+    setScenarios(arr);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch {}
+  };
+
+  const current = scenarios[idx] || scenarios[0];
+  const updateForm = (k, v) => {
+    const next = scenarios.map((s, i) => i === idx ? { ...s, form: { ...s.form, [k]: v } } : s);
+    persist(next);
+  };
+  const rename = (v) => {
+    const next = scenarios.map((s, i) => i === idx ? { ...s, name: v } : s);
+    persist(next);
+  };
+  const addScenario = () => {
+    const next = scenarios.concat([{ id: String(Date.now()), name: `Draft ${scenarios.length + 1}`, form: { ...emptyForm } }]);
+    persist(next);
+    setIdx(next.length - 1);
+  };
+  const duplicate = () => {
+    const s = scenarios[idx];
+    const copy = { id: String(Date.now()), name: s.name + ' (copy)', form: { ...s.form } };
+    const next = scenarios.concat([copy]);
+    persist(next);
+    setIdx(next.length - 1);
+  };
+  const remove = () => {
+    if (scenarios.length <= 1) return;
+    const next = scenarios.filter((_, i) => i !== idx);
+    persist(next);
+    setIdx(Math.max(0, idx - 1));
+  };
+
   const run = async () => {
-    const res = await fetch('/api/tester', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(form) });
-    const json = await res.json();
-    setPreview(json);
+    setLoading(true);
+    try {
+      const res = await fetch('/api/tester', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(current.form) });
+      const json = await res.json();
+      setPreview(json);
+    } finally {
+      setLoading(false);
+    }
   };
   const sendNow = async () => {
-    // Submit to real intake so it goes into the queue, then trigger worker
-    await fetch('/intake', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(form) });
+    await fetch('/intake', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(current.form) });
     await fetch('/api/worker/run', { method:'POST' });
     alert('Sent: queued and worker triggered. Check your inbox and Logs.');
   };
+
   return (
     <div className="card">
-      <h2>Tester</h2>
-      <div className="row">
-        <div className="col"><label>Name</label><input value={form.name} onChange={e=>update('name', e.target.value)} /></div>
-        <div className="col"><label>Email</label><input value={form.email} onChange={e=>update('email', e.target.value)} /></div>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+        <h2>Tester</h2>
+        <div style={{display:'flex', gap:8, alignItems:'center'}}>
+          <label className="small">Scenario</label>
+          <select value={idx} onChange={(e)=>setIdx(Number(e.target.value))}>
+            {scenarios.map((s, i)=>(<option key={s.id} value={i}>{s.name}</option>))}
+          </select>
+          <button className="secondary" onClick={addScenario}>Add</button>
+          <button className="secondary" onClick={duplicate}>Duplicate</button>
+          <button className="danger" onClick={remove} disabled={scenarios.length<=1}>Delete</button>
+        </div>
+      </div>
+
+      <div className="row" style={{marginTop:8}}>
+        <div className="col"><label>Scenario Name</label><input value={current.name} onChange={e=>rename(e.target.value)} /></div>
       </div>
       <div className="row">
-        <div className="col"><label>Subject</label><input value={form.subject} onChange={e=>update('subject', e.target.value)} /></div>
+        <div className="col"><label>Name</label><input value={current.form.name} onChange={e=>updateForm('name', e.target.value)} /></div>
+        <div className="col"><label>Email</label><input value={current.form.email} onChange={e=>updateForm('email', e.target.value)} /></div>
       </div>
       <div className="row">
-        <div className="col"><label>Message</label><textarea value={form.message} onChange={e=>update('message', e.target.value)} /></div>
+        <div className="col"><label>Subject</label><input value={current.form.subject} onChange={e=>updateForm('subject', e.target.value)} /></div>
+      </div>
+      <div className="row">
+        <div className="col"><label>Message</label><textarea value={current.form.message} onChange={e=>updateForm('message', e.target.value)} /></div>
       </div>
       <div style={{display:'flex', gap:8}}>
-        <button onClick={run}>Preview</button>
+        <button onClick={run} className={loading? 'loading': ''} disabled={loading}>Preview</button>
         {preview && <button onClick={sendNow}>Send This Preview</button>}
         {preview && preview.matchedSection && <span className="badge">Test with Section: {preview.matchedSection}</span>}
         {preview && <button className="secondary" onClick={()=>setDebugOpen(o=>!o)}>{debugOpen ? 'Hide Prompt' : 'Show Prompt'}</button>}
