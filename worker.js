@@ -2,11 +2,12 @@
 // Run: node worker.js
 // Or trigger via POST /api/worker/run (server.js)
 
-const { dequeueJob, queueLength } = require('./src/lib/queue');
+const { dequeueJob, queueLength, enqueueJob } = require('./src/lib/queue');
 const { getSettings } = require('./src/lib/settings');
 const { sendEmail } = require('./src/lib/resend');
 const { buildEmail } = require('./src/lib/template');
 const { logEvent } = require('./src/lib/logger');
+const { matchSection } = require('./src/lib/ai');
 
 async function processOne() {
   await logEvent('worker.dequeue.attempt', {});
@@ -17,6 +18,23 @@ async function processOne() {
   if (!settings.enableAutoResponder) {
     await logEvent('worker.skip.disabled', { id: job.id });
     return { processed: 0, skipped: true, reason: 'disabled' };
+  }
+
+  // Delay handling: section override > default
+  try {
+    const { matched } = matchSection(job.form || {}, settings);
+    const delaySec = Number((matched && matched.delaySeconds != null ? matched.delaySeconds : settings.defaultDelaySeconds) || 0);
+    const notBefore = (job.receivedAt || 0) + delaySec * 1000;
+    const now = Date.now();
+    if (delaySec > 0 && now < notBefore) {
+      const remaining = Math.ceil((notBefore - now) / 1000);
+      await logEvent('worker.delay.defer', { id: job.id, remainingSeconds: remaining, delaySec });
+      // Re-enqueue to the tail to check later
+      await enqueueJob(job);
+      return { processed: 0, skipped: true, reason: 'delay', remaining };
+    }
+  } catch (e) {
+    await logEvent('worker.delay.error', { id: job.id, error: String(e && e.message || e) });
   }
 
   const mail = await buildEmail({ settings, job });

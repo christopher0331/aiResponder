@@ -19,29 +19,30 @@ function clampSentences(txt, maxSentences) {
   return parts.slice(0, maxSentences).join(' ');
 }
 
+function matchSection(form, settings) {
+  const sections = Array.isArray(settings.sections) ? settings.sections : [];
+  const hay = `${toText(form.subject)}\n${toText(form.message)}`.toLowerCase();
+  let best = null;
+  let bestScore = -1;
+  for (const s of sections) {
+    if (s && s.enabled === false) continue;
+    const kws = (s.keywords || []).map((k) => String(k || '').toLowerCase()).filter(Boolean);
+    let score = 0;
+    for (const k of kws) { if (k && hay.includes(k)) score += 1; }
+    const pr = Number(s.priority || 0);
+    score += pr * 0.01;
+    if (score > bestScore && score > 0) { best = s; bestScore = score; }
+  }
+  return { matched: best, score: bestScore };
+}
+
 async function generateReply({ form, settings }) {
   // Fallback early if no key
   if (!OPENAI_KEY) {
     return { bodyText: null, usedAI: false, reason: 'missing_key' };
   }
 
-  // Determine best-matching section based on keywords in subject/message
-  const sections = Array.isArray(settings.sections) ? settings.sections : [];
-  const hay = `${toText(form.subject)}\n${toText(form.message)}`.toLowerCase();
-  let matched = null;
-  let matchedScore = -1;
-  for (const s of sections) {
-    if (s && s.enabled === false) continue;
-    const kws = (s.keywords || []).map((k) => String(k || '').toLowerCase()).filter(Boolean);
-    let score = 0;
-    for (const k of kws) {
-      if (k && hay.includes(k)) score += 1;
-    }
-    // Boost by priority (higher wins)
-    const pr = Number(s.priority || 0);
-    score += pr * 0.01; // tiny boost
-    if (score > matchedScore && score > 0) { matched = s; matchedScore = score; }
-  }
+  const { matched, score: matchedScore } = matchSection(form, settings);
   let matchedName = null;
   if (matched) {
     matchedName = matched.name || '';
@@ -112,4 +113,4 @@ async function generateReply({ form, settings }) {
   }
 }
 
-module.exports = { generateReply };
+module.exports = { generateReply, matchSection };

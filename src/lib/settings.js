@@ -12,6 +12,8 @@ const DEFAULTS = {
   fromEmail: process.env.RESEND_FROM || '',
   // Rule-based sections: each { name, keywords: ["repair"], instructions: "...", priority: 1 }
   sections: [],
+  // Default per-message delay in seconds when no section-specific delay is set
+  defaultDelaySeconds: 0,
 };
 
 async function getSettings() {
