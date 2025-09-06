@@ -176,31 +176,45 @@ function Profile() {
   }, []);
   if (!settings) return <div className="card">Loading…</div>;
   const update = (k,v)=> setSettings(s=>({ ...s, [k]: v }));
-  const save = async () => {
+  const save = async (payload) => {
     setSaving(true);
-    const res = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) });
+    const body = JSON.stringify(payload || settings);
+    const res = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
     const json = await res.json();
     setSettings(json); setSaving(false); setSavingAction('');
   };
-  const handleEnable = async () => { update('enableAutoResponder', true); setSavingAction('enable'); await save(); };
-  const handleDisable = async () => { update('enableAutoResponder', false); setSavingAction('disable'); await save(); };
+  const handleEnable = async () => {
+    const next = { ...settings, enableAutoResponder: true };
+    setSettings(next);
+    setSavingAction('enable');
+    await save(next);
+  };
+  const handleDisable = async () => {
+    const next = { ...settings, enableAutoResponder: false };
+    setSettings(next);
+    setSavingAction('disable');
+    await save(next);
+  };
   return (
     <div className="card">
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <h2>AI Replies Settings</h2>
-        <div style={{display:'flex',gap:8}}>
+        <div className="controls">
+          <label className="small" style={{opacity:0.9}}>Auto-Responder</label>
+          <input className="bigcheck" type="checkbox" checked={!!settings.enableAutoResponder} onChange={async (e)=>{
+            const next = { ...settings, enableAutoResponder: e.target.checked };
+            setSettings(next);
+            setSavingAction(e.target.checked ? 'enable' : 'disable');
+            await save(next);
+          }} />
+          <span className={`badge indicator ${settings.enableAutoResponder ? 'success' : 'danger'}`}>
+            {settings.enableAutoResponder ? 'ON' : 'OFF'}
+          </span>
           <button className={`secondary ${savingAction==='enable' ? 'loading' : ''}`} disabled={!!settings.enableAutoResponder || saving} onClick={handleEnable}>Enable</button>
           <button className={`danger ${savingAction==='disable' ? 'loading' : ''}`} disabled={!settings.enableAutoResponder || saving} onClick={handleDisable}>Disable</button>
         </div>
       </div>
-      <div className={`status ${settings.enableAutoResponder ? 'enabled' : 'disabled'}`}>
-        {settings.enableAutoResponder ? 'Enabled' : 'Disabled'}
-      </div>
       <div className="row">
-        <div className="col">
-          <label>Enable Auto-Responder</label>
-          <input type="checkbox" checked={!!settings.enableAutoResponder} onChange={e=>update('enableAutoResponder', e.target.checked)} />
-        </div>
         <div className="col">
           <label>From Email</label>
           <input value={settings.fromEmail||''} onChange={e=>update('fromEmail', e.target.value)} placeholder="replies@yourdomain.com" />
