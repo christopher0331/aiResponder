@@ -8,6 +8,7 @@ const { sendEmail } = require('./src/lib/resend');
 const { buildEmail } = require('./src/lib/template');
 const { logEvent } = require('./src/lib/logger');
 const { matchSection } = require('./src/lib/ai');
+const { addSentEmail } = require('./src/lib/outbox');
 
 async function processOne() {
   await logEvent('worker.dequeue.attempt', {});
@@ -44,13 +45,25 @@ async function processOne() {
   }
 
   try {
-    await sendEmail({
+    const sendRes = await sendEmail({
       to: mail.toEmail,
       subject: mail.subject,
       html: mail.html,
       text: mail.text,
       from: settings.fromEmail || process.env.RESEND_FROM,
     });
+    await logEvent('worker.send.success', { id: job.id });
+    try {
+      await addSentEmail({
+        id: sendRes && sendRes.id,
+        to: mail.toEmail,
+        subject: mail.subject,
+        text: mail.text,
+        html: mail.html,
+        section: (matchSection(job.form || {}, settings).matched || {}).name || null,
+        meta: { jobId: job.id },
+      });
+    } catch {}
     await logEvent('worker.send.success', { id: job.id, to: mail.toEmail, subject: mail.subject });
     return { processed: 1, to: mail.toEmail };
   } catch (e) {

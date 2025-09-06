@@ -1,7 +1,85 @@
+function Outbox() {
+  const [items, setItems] = useState([]);
+  const [offset, setOffset] = useState(0);
+  const [limit, setLimit] = useState(20);
+  const [loading, setLoading] = useState(false);
+
+  const fetchPage = async (off = offset, lim = limit) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/outbox?offset=${off}&limit=${lim}`);
+      const j = await res.json();
+      setItems(j.items || []);
+      setOffset(j.offset || 0);
+      setLimit(j.limit || 20);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchPage(0, limit); }, []);
+
+  const next = () => fetchPage(offset + limit, limit);
+  const prev = () => fetchPage(Math.max(0, offset - limit), limit);
+
+  return (
+    <div className="card">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <h2>Outbox</h2>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <label className="small">Page Size</label>
+          <select value={limit} onChange={(e)=>fetchPage(0, Number(e.target.value))}>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <button className={`secondary ${loading?'loading':''}`} onClick={()=>fetchPage(offset, limit)} disabled={loading}>Refresh</button>
+        </div>
+      </div>
+
+      {items.length === 0 && (
+        <div className="small">No sent emails yet.</div>
+      )}
+
+      {items.map((m, i) => (
+        <div key={i} className="card" style={{marginTop:12}}>
+          <div className="row">
+            <div className="col">
+              <div className="small">To</div>
+              <div>{Array.isArray(m.to) ? m.to.join(', ') : m.to}</div>
+            </div>
+            <div className="col">
+              <div className="small">Subject</div>
+              <div>{m.subject}</div>
+            </div>
+            <div className="col">
+              <div className="small">Sent</div>
+              <div className="small">{m.sentAt ? new Date(m.sentAt).toLocaleString() : ''}</div>
+            </div>
+            <div className="col">
+              <div className="small">Section</div>
+              <span className={`badge ${m.section ? 'success' : 'secondary'}`}>{m.section || '—'}</span>
+            </div>
+          </div>
+          <details style={{marginTop:8}}>
+            <summary className="small">Preview</summary>
+            <div style={{marginTop:8}} dangerouslySetInnerHTML={{ __html: m.html }} />
+          </details>
+        </div>
+      ))}
+
+      <div style={{display:'flex',justifyContent:'space-between',marginTop:12}}>
+        <button className="secondary" onClick={prev} disabled={loading || offset===0}>Prev</button>
+        <div className="small">Offset {offset} • Showing {items.length}</div>
+        <button onClick={next} disabled={loading || items.length < limit}>Next</button>
+      </div>
+    </div>
+  );
+}
 const { useState, useEffect } = React;
 
 function Tabs({ tab, setTab }) {
-  const tabs = ['Profile', 'Tester', 'Queue', 'Sections', 'Logs'];
+  const tabs = ['Profile', 'Tester', 'Queue', 'Sections', 'Outbox', 'Logs'];
   return (
     <div className="tabs">
       {tabs.map((t) => (
@@ -374,6 +452,7 @@ function App() {
       {tab === 'Tester' && <Tester />}
       {tab === 'Queue' && <Queue />}
       {tab === 'Sections' && <Sections />}
+      {tab === 'Outbox' && <Outbox />}
       {tab === 'Logs' && <Logs />}
     </div>
   );

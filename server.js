@@ -13,6 +13,7 @@ const { enqueueJob, queueLength } = require('./src/lib/queue');
 const { getSettings, saveSettings } = require('./src/lib/settings');
 const { buildEmail } = require('./src/lib/template');
 const { logEvent, fetchLogs } = require('./src/lib/logger');
+const { fetchOutbox } = require('./src/lib/outbox');
 const { lrange, lrem, setJson, getJson } = require('./src/lib/upstash');
 const { setAuthCookie, clearAuthCookie, isAuthed, checkPassword } = require('./src/lib/auth');
 const { runOnce } = require('./worker');
@@ -254,6 +255,15 @@ const server = http.createServer(async (req, res) => {
       const logs = await fetchLogs(limit);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ logs }));
+    }
+
+    // Outbox (paginated)
+    if (req.method === 'GET' && url.pathname === '/api/outbox') {
+      const offset = Number(url.searchParams.get('offset') || 0);
+      const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') || 20)));
+      const { items, totalApprox } = await fetchOutbox(offset, limit);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ items, offset, limit, totalApprox }));
     }
 
     // Admin UI static files (gate: redirect to login if not authed)
