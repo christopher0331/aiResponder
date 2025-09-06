@@ -170,6 +170,7 @@ function Logs() {
 function Profile() {
   const [settings, setSettings] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [savingAction, setSavingAction] = useState(''); // 'enable' | 'disable' | ''
   useEffect(() => {
     fetch('/api/settings').then(r=>r.json()).then(setSettings);
   }, []);
@@ -179,16 +180,21 @@ function Profile() {
     setSaving(true);
     const res = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) });
     const json = await res.json();
-    setSettings(json); setSaving(false);
+    setSettings(json); setSaving(false); setSavingAction('');
   };
+  const handleEnable = async () => { update('enableAutoResponder', true); setSavingAction('enable'); await save(); };
+  const handleDisable = async () => { update('enableAutoResponder', false); setSavingAction('disable'); await save(); };
   return (
     <div className="card">
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <h2>AI Replies Settings</h2>
         <div style={{display:'flex',gap:8}}>
-          <button className="secondary" onClick={()=>{ update('enableAutoResponder', true); save(); }}>Enable</button>
-          <button className="danger" onClick={()=>{ update('enableAutoResponder', false); save(); }}>Disable</button>
+          <button className={`secondary ${savingAction==='enable' ? 'loading' : ''}`} disabled={!!settings.enableAutoResponder || saving} onClick={handleEnable}>Enable</button>
+          <button className={`danger ${savingAction==='disable' ? 'loading' : ''}`} disabled={!settings.enableAutoResponder || saving} onClick={handleDisable}>Disable</button>
         </div>
+      </div>
+      <div className={`status ${settings.enableAutoResponder ? 'enabled' : 'disabled'}`}>
+        {settings.enableAutoResponder ? 'Enabled' : 'Disabled'}
       </div>
       <div className="row">
         <div className="col">
