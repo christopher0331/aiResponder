@@ -1,7 +1,7 @@
 const { useState, useEffect } = React;
 
 function Tabs({ tab, setTab }) {
-  const tabs = ['Profile', 'Tester', 'Queue', 'Logs'];
+  const tabs = ['Profile', 'Tester', 'Queue', 'Sections', 'Logs'];
   return (
     <div className="tabs">
       {tabs.map((t) => (
@@ -128,11 +128,18 @@ function Profile() {
 function Tester() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [preview, setPreview] = useState(null);
+  const [debugOpen, setDebugOpen] = useState(false);
   const update = (k,v)=> setForm(s=>({ ...s, [k]: v }));
   const run = async () => {
     const res = await fetch('/api/tester', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(form) });
     const json = await res.json();
     setPreview(json);
+  };
+  const sendNow = async () => {
+    // Submit to real intake so it goes into the queue, then trigger worker
+    await fetch('/intake', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(form) });
+    await fetch('/api/worker/run', { method:'POST' });
+    alert('Sent: queued and worker triggered. Check your inbox and Logs.');
   };
   return (
     <div className="card">
@@ -147,12 +154,26 @@ function Tester() {
       <div className="row">
         <div className="col"><label>Message</label><textarea value={form.message} onChange={e=>update('message', e.target.value)} /></div>
       </div>
-      <button onClick={run}>Preview</button>
+      <div style={{display:'flex', gap:8}}>
+        <button onClick={run}>Preview</button>
+        {preview && <button onClick={sendNow}>Send This Preview</button>}
+        {preview && preview.matchedSection && <span className="badge">Test with Section: {preview.matchedSection}</span>}
+        {preview && <button className="secondary" onClick={()=>setDebugOpen(o=>!o)}>{debugOpen ? 'Hide Prompt' : 'Show Prompt'}</button>}
+      </div>
       {preview && (
         <div className="card" style={{marginTop:12}}>
           <div className="small">Preview (not exact):</div>
           <div><strong>Subject:</strong> {preview.subject}</div>
           <div style={{marginTop:8}} dangerouslySetInnerHTML={{ __html: preview.html }} />
+          {debugOpen && preview.debug && (
+            <details open style={{marginTop:12}}>
+              <summary>Raw Prompt</summary>
+              <div className="small"><strong>System</strong></div>
+              <pre className="small" style={{whiteSpace:'pre-wrap'}}>{preview.debug.system}</pre>
+              <div className="small"><strong>User</strong></div>
+              <pre className="small" style={{whiteSpace:'pre-wrap'}}>{preview.debug.user}</pre>
+            </details>
+          )}
         </div>
       )}
     </div>
@@ -216,6 +237,7 @@ function App() {
       {tab === 'Profile' && <Profile />}
       {tab === 'Tester' && <Tester />}
       {tab === 'Queue' && <Queue />}
+      {tab === 'Sections' && <Sections />}
       {tab === 'Logs' && <Logs />}
     </div>
   );

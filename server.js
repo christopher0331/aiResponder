@@ -162,7 +162,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/tester') {
       const { body } = await readBody(req);
       const settings = await getSettings();
-      const preview = buildEmail({ settings, job: { form: body || {} } });
+      const preview = await buildEmail({ settings, job: { form: body || {} } });
       await logEvent('tester.preview', { to: preview.toEmail, subject: preview.subject });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify(preview));

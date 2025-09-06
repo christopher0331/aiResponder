@@ -25,6 +25,28 @@ async function generateReply({ form, settings }) {
     return { bodyText: null, usedAI: false, reason: 'missing_key' };
   }
 
+  // Determine best-matching section based on keywords in subject/message
+  const sections = Array.isArray(settings.sections) ? settings.sections : [];
+  const hay = `${toText(form.subject)}\n${toText(form.message)}`.toLowerCase();
+  let matched = null;
+  let matchedScore = -1;
+  for (const s of sections) {
+    const kws = (s.keywords || []).map((k) => String(k || '').toLowerCase()).filter(Boolean);
+    let score = 0;
+    for (const k of kws) {
+      if (k && hay.includes(k)) score += 1;
+    }
+    // Boost by priority (higher wins)
+    const pr = Number(s.priority || 0);
+    score += pr * 0.01; // tiny boost
+    if (score > matchedScore && score > 0) { matched = s; matchedScore = score; }
+  }
+  let matchedName = null;
+  if (matched) {
+    matchedName = matched.name || '';
+    try { await logEvent('section.matched', { name: matchedName, score: matchedScore }); } catch {}
+  }
+
   const system = [
     'You are a front desk email replier for a small business.',
     'Your goal is to reply to incoming website form submissions quickly and helpfully.',
@@ -32,6 +54,7 @@ async function generateReply({ form, settings }) {
     `Limit yourself to ${settings.maxSentences || 2} sentences.`,
     'Avoid em dashes. Keep it sounding human.',
     settings.systemInstructions ? `Business-specific guidance: ${settings.systemInstructions}` : '',
+    matched && matched.instructions ? `IMPORTANT domain rule to apply: ${matched.instructions}` : '',
   ].filter(Boolean).join('\n');
 
   const user = [
@@ -65,7 +88,7 @@ async function generateReply({ form, settings }) {
   }
 
   try {
-    await logEvent('ai.generate.request', { model: MODEL });
+    await logEvent('ai.generate.request', { model: MODEL, section: matchedName });
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -80,11 +103,11 @@ async function generateReply({ form, settings }) {
     }
     const bodyText = (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || '';
     const trimmed = clampSentences(bodyText.trim(), settings.maxSentences || 2);
-    await logEvent('ai.generate.result', { usedAI: true });
-    return { bodyText: trimmed, usedAI: true };
+    await logEvent('ai.generate.result', { usedAI: true, section: matchedName });
+    return { bodyText: trimmed, usedAI: true, matchedSection: matchedName, debug: { system, user } };
   } catch (e) {
     await logEvent('ai.generate.error', { error: String(e && e.message || e) });
-    return { bodyText: null, usedAI: false, reason: 'error' };
+    return { bodyText: null, usedAI: false, reason: 'error', matchedSection: matchedName, debug: { system, user } };
   }
 }
 

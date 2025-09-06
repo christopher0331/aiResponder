@@ -10,6 +10,8 @@ const DEFAULTS = {
   tone: 'friendly, concise, professional',
   maxSentences: 2,
   fromEmail: process.env.RESEND_FROM || '',
+  // Rule-based sections: each { name, keywords: ["repair"], instructions: "...", priority: 1 }
+  sections: [],
 };
 
 async function getSettings() {
