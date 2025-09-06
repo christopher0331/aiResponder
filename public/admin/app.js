@@ -345,7 +345,6 @@ function Tester() {
   const emptyForm = { name: '', email: '', subject: '', message: '' };
   const [scenarios, setScenarios] = useState([{ id: String(Date.now()), name: 'Draft 1', form: { ...emptyForm } }]);
   const [idx, setIdx] = useState(0);
-  const [preview, setPreview] = useState(null);
   const [debugOpen, setDebugOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -385,7 +384,7 @@ function Tester() {
   };
   const duplicate = () => {
     const s = scenarios[idx];
-    const copy = { id: String(Date.now()), name: s.name + ' (copy)', form: { ...s.form } };
+    const copy = { id: String(Date.now()), name: s.name + ' (copy)', form: { ...s.form }, preview: s.preview ? { ...s.preview } : undefined };
     const next = scenarios.concat([copy]);
     persist(next);
     setIdx(next.length - 1);
@@ -402,7 +401,8 @@ function Tester() {
     try {
       const res = await fetch('/api/tester', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(current.form) });
       const json = await res.json();
-      setPreview(json);
+      const next = scenarios.map((s, i) => i === idx ? { ...s, preview: json } : s);
+      persist(next);
     } finally {
       setLoading(false);
     }
@@ -444,22 +444,22 @@ function Tester() {
       </div>
       <div style={{display:'flex', gap:8}}>
         <button onClick={run} className={loading? 'loading': ''} disabled={loading}>Preview</button>
-        {preview && <button onClick={sendNow}>Send This Preview</button>}
-        {preview && preview.matchedSection && <span className="badge">Test with Section: {preview.matchedSection}</span>}
-        {preview && <button className="secondary" onClick={()=>setDebugOpen(o=>!o)}>{debugOpen ? 'Hide Prompt' : 'Show Prompt'}</button>}
+        {current.preview && <button onClick={sendNow}>Send This Preview</button>}
+        {current.preview && current.preview.matchedSection && <span className="badge">Test with Section: {current.preview.matchedSection}</span>}
+        {current.preview && <button className="secondary" onClick={()=>setDebugOpen(o=>!o)}>{debugOpen ? 'Hide Prompt' : 'Show Prompt'}</button>}
       </div>
-      {preview && (
+      {current.preview && (
         <div className="card" style={{marginTop:12}}>
           <div className="small">Preview (not exact):</div>
-          <div><strong>Subject:</strong> {preview.subject}</div>
-          <div style={{marginTop:8}} dangerouslySetInnerHTML={{ __html: preview.html }} />
-          {debugOpen && preview.debug && (
+          <div><strong>Subject:</strong> {current.preview.subject}</div>
+          <div style={{marginTop:8}} dangerouslySetInnerHTML={{ __html: current.preview.html }} />
+          {debugOpen && current.preview.debug && (
             <details open style={{marginTop:12}}>
               <summary>Raw Prompt</summary>
               <div className="small"><strong>System</strong></div>
-              <pre className="small" style={{whiteSpace:'pre-wrap'}}>{preview.debug.system}</pre>
+              <pre className="small" style={{whiteSpace:'pre-wrap'}}>{current.preview.debug.system}</pre>
               <div className="small"><strong>User</strong></div>
-              <pre className="small" style={{whiteSpace:'pre-wrap'}}>{preview.debug.user}</pre>
+              <pre className="small" style={{whiteSpace:'pre-wrap'}}>{current.preview.debug.user}</pre>
             </details>
           )}
         </div>
