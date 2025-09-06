@@ -95,6 +95,7 @@ function Tabs({ tab, setTab }) {
 function Sections() {
   const [settings, setSettings] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
 
   useEffect(() => {
     fetch('/api/settings').then(r=>r.json()).then((s)=>{
@@ -146,15 +147,18 @@ function Sections() {
     const secs = Array.isArray(json.sections) ? json.sections.map(sec => ({ ...sec, keywordsText: (sec.keywords||[]).join(', ') })) : [];
     setSettings({ ...json, sections: secs });
     setSaving(false);
+    setJustSaved(true);
+    setTimeout(()=>setJustSaved(false), 1600);
   };
 
   return (
     <div className="card">
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <h2>Rules</h2>
-        <div style={{display:'flex', gap:8}}>
+        <div style={{display:'flex', gap:8, alignItems:'center'}}>
           <button className="secondary" onClick={addSection}>Add Rule</button>
           <button onClick={()=>save()} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+          {justSaved && <span className="badge success flash">Saved</span>}
         </div>
       </div>
 
@@ -257,6 +261,7 @@ function Profile() {
   const [settings, setSettings] = useState(null);
   const [saving, setSaving] = useState(false);
   const [savingAction, setSavingAction] = useState(''); // 'enable' | 'disable' | ''
+  const [justSaved, setJustSaved] = useState(false);
   useEffect(() => {
     fetch('/api/settings').then(r=>r.json()).then(setSettings);
   }, []);
@@ -268,6 +273,8 @@ function Profile() {
     const res = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
     const json = await res.json();
     setSettings(json); setSaving(false); setSavingAction('');
+    setJustSaved(true);
+    setTimeout(()=>setJustSaved(false), 1600);
   };
   const handleEnable = async () => {
     const next = { ...settings, enableAutoResponder: true };
@@ -296,6 +303,7 @@ function Profile() {
           <span className={`badge indicator ${settings.enableAutoResponder ? 'success' : 'danger'}`}>
             {settings.enableAutoResponder ? 'ON' : 'OFF'}
           </span>
+          {justSaved && <span className="badge success flash">Saved</span>}
         </div>
       </div>
       <div className="row">
