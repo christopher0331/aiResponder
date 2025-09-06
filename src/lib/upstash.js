@@ -46,5 +46,6 @@ async function llen(key) { return call('llen', key); }
 async function lpush(key, value) { return call('lpush', key, value); }
 async function lrange(key, start, stop) { return call('lrange', key, start, stop); }
 async function ltrim(key, start, stop) { return call('ltrim', key, start, stop); }
+async function lrem(key, count, value) { return call('lrem', key, count, value); }
 
-module.exports = { call, setJson, getJson, rpush, lpop, llen, lpush, lrange, ltrim };
+module.exports = { call, setJson, getJson, rpush, lpop, llen, lpush, lrange, ltrim, lrem };

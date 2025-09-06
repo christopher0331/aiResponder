@@ -19,7 +19,14 @@ function Sections() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch('/api/settings').then(r=>r.json()).then(setSettings);
+    fetch('/api/settings').then(r=>r.json()).then((s)=>{
+      // Initialize keywordsText for UX
+      const secs = Array.isArray(s.sections) ? s.sections.map(sec => ({
+        ...sec,
+        keywordsText: Array.isArray(sec.keywords) ? sec.keywords.join(', ') : (sec.keywordsText || ''),
+      })) : [];
+      setSettings({ ...s, sections: secs });
+    });
   }, []);
 
   if (!settings) return <div className="card">Loading…</div>;
@@ -40,9 +47,26 @@ function Sections() {
   };
   const save = async () => {
     setSaving(true);
-    const res = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) });
+    // Derive clean keywords array from keywordsText before saving
+    const clean = {
+      ...settings,
+      sections: sections.map(sec => ({
+        name: sec.name || '',
+        priority: Number(sec.priority || 0),
+        enabled: sec.enabled !== false,
+        instructions: sec.instructions || '',
+        keywords: (sec.keywordsText || (Array.isArray(sec.keywords)? sec.keywords.join(', '):''))
+          .split(',')
+          .map(s=>s.trim())
+          .filter(Boolean),
+      })),
+    };
+    const res = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(clean) });
     const json = await res.json();
-    setSettings(json); setSaving(false);
+    // Rehydrate keywordsText for continued editing UX
+    const secs = Array.isArray(json.sections) ? json.sections.map(sec => ({ ...sec, keywordsText: (sec.keywords||[]).join(', ') })) : [];
+    setSettings({ ...json, sections: secs });
+    setSaving(false);
   };
 
   return (
@@ -77,8 +101,8 @@ function Sections() {
             <div className="col">
               <label>Keywords (comma-separated)</label>
               <input
-                value={(sec.keywords||[]).join(', ')}
-                onChange={e=>updateSection(idx,{ keywords: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) })}
+                value={sec.keywordsText||''}
+                onChange={e=>updateSection(idx,{ keywordsText: e.target.value })}
                 placeholder="repair, broken, fix"
               />
             </div>

@@ -13,10 +13,12 @@ const { enqueueJob, queueLength } = require('./src/lib/queue');
 const { getSettings, saveSettings } = require('./src/lib/settings');
 const { buildEmail } = require('./src/lib/template');
 const { logEvent, fetchLogs } = require('./src/lib/logger');
+const { lrange, lrem, setJson, getJson } = require('./src/lib/upstash');
 const { setAuthCookie, clearAuthCookie, isAuthed, checkPassword } = require('./src/lib/auth');
 const { runOnce } = require('./worker');
 
 const PORT = process.env.PORT || 8080;
+const LAST_RUN_KEY = 'air:lastRun';
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -158,6 +160,63 @@ const server = http.createServer(async (req, res) => {
       return res.end(JSON.stringify({ length }));
     }
 
+    // List queued items (peek; newest at end since we RPUSH)
+    if (req.method === 'GET' && url.pathname === '/api/queue/items') {
+      const out = await lrange(require('./src/lib/queue').QUEUE_KEY, 0, -1);
+      const arr = out?.result || [];
+      const items = arr.map((raw) => {
+        try {
+          const j = JSON.parse(raw);
+          return {
+            id: j.id,
+            receivedAt: j.receivedAt,
+            email: j.form?.email || null,
+            subject: j.form?.subject || '',
+            name: j.form?.name || j.form?.fullName || '',
+          };
+        } catch { return null; }
+      }).filter(Boolean);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ items }));
+    }
+
+    // Respond to a single queued item by id (remove from queue and process)
+    if (req.method === 'POST' && url.pathname === '/api/queue/respond') {
+      const { body } = await readBody(req);
+      const id = body?.id;
+      if (!id) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'id required' }));
+      }
+      const listOut = await lrange(require('./src/lib/queue').QUEUE_KEY, 0, -1);
+      const arr = listOut?.result || [];
+      let raw = null;
+      for (const r of arr) {
+        try { const j = JSON.parse(r); if (j && j.id === id) { raw = r; break; } } catch {}
+      }
+      if (!raw) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'not_found' }));
+      }
+      // Remove the found job
+      await lrem(require('./src/lib/queue').QUEUE_KEY, 1, raw);
+      let job;
+      try { job = JSON.parse(raw); } catch { job = null; }
+      if (!job) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'bad_job' }));
+      }
+      // Process using the same pipeline as worker
+      const settings = await getSettings();
+      const mail = await require('./src/lib/template').buildEmail({ settings, job });
+      await require('./src/lib/resend').sendEmail({
+        to: mail.toEmail, subject: mail.subject, html: mail.html, text: mail.text, from: settings.fromEmail || process.env.RESEND_FROM,
+      });
+      await logEvent('queue.respond.single', { id });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ ok: true }));
+    }
+
     // Tester: returns preview built from settings + provided form (no send)
     if (req.method === 'POST' && url.pathname === '/api/tester') {
       const { body } = await readBody(req);
@@ -169,8 +228,21 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && url.pathname === '/api/worker/run') {
+      const settings = await getSettings();
+      const minSec = Number(settings.workerMinIntervalSec || 0);
+      if (minSec > 0) {
+        const last = await getJson(LAST_RUN_KEY);
+        const now = Date.now();
+        if (last && now - Number(last.ts || 0) < minSec * 1000) {
+          const remaining = Math.max(0, Math.ceil((minSec * 1000 - (now - Number(last.ts || 0))) / 1000));
+          await logEvent('worker.run.skipped_throttle', { remaining });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ processed: 0, skipped: 'throttle', remainingSeconds: remaining }));
+        }
+      }
       await logEvent('worker.run.request', {});
       const result = await runOnce();
+      await setJson(LAST_RUN_KEY, { ts: Date.now() });
       await logEvent('worker.run.result', result);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify(result));
