@@ -5,7 +5,7 @@
 const { logEvent } = require('./logger');
 
 const OPENAI_KEY = process.env.NEXT_CHATGPT_API_KEY || '';
-const MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
+const MODEL = process.env.AI_MODEL || 'gpt-5';
 
 function toText(val) {
   if (val == null) return '';
