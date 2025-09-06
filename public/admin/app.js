@@ -416,18 +416,16 @@ function Tester() {
   return (
     <div className="card">
       <h2 style={{marginBottom:8}}>Tester</h2>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-        <div className="tabs" style={{overflowX:'auto', whiteSpace:'nowrap'}}>
-          {scenarios.map((s, i) => (
-            <button key={s.id} className={i===idx ? 'active' : ''} onClick={()=>setIdx(i)} style={{marginBottom:0}}>
-              {s.name}
-            </button>
-          ))}
-        </div>
-        <div style={{display:'flex', gap:8}}>
-          <button className="secondary" title="Add scenario" onClick={addScenario}>+ Add</button>
+      <div className="tabbar" style={{marginBottom:8}}>
+        {scenarios.map((s, i) => (
+          <div key={s.id} className={`tab ${i===idx ? 'active' : ''}`} onClick={()=>setIdx(i)}>
+            <span style={{maxWidth:180, overflow:'hidden', textOverflow:'ellipsis'}}>{s.name}</span>
+            <button className="close" title="Close" onClick={(e)=>{ e.stopPropagation(); if (scenarios.length>1) { const next = scenarios.filter((_, j)=>j!==i); persist(next); setIdx(Math.max(0, i-1)); }}}>&times;</button>
+          </div>
+        ))}
+        <div className="tab add" title="New Tab" onClick={addScenario}>+ New</div>
+        <div style={{marginLeft:'auto', display:'flex', gap:6}}>
           <button className="secondary" title="Duplicate current" onClick={duplicate}>Duplicate</button>
-          <button className="danger" title="Delete current" onClick={remove} disabled={scenarios.length<=1}>Delete</button>
         </div>
       </div>
 

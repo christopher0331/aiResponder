@@ -32,6 +32,12 @@ button.secondary{background:#2a3144}
 .tabs{display:flex;gap:8px;margin-bottom:12px}
 .tabs button{background:#1b2333}
 .tabs button.active{background:#2b6cb0}
+.tabbar{display:flex;align-items:center;gap:6px;padding:4px;background:#0f1219;border:1px solid #232a3b;border-radius:8px;overflow-x:auto}
+.tab{display:flex;align-items:center;gap:8px;background:#1b2333;border:1px solid #2a3144;color:#eaeef2;padding:8px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.tab.active{background:#2b6cb0;border-color:#2b6cb0}
+.tab .close{background:transparent;border:0;color:#cbd5e1;cursor:pointer;padding:0 4px}
+.tab .close:hover{color:#fff}
+.tab.add{background:#223052;border-style:dashed}
 .table{width:100%;border-collapse:collapse}
 .table th,.table td{border-bottom:1px solid #232a3b;padding:8px 6px;text-align:left}
 .small{font-size:12px;opacity:.8}
