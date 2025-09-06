@@ -5,7 +5,8 @@
 const { logEvent } = require('./logger');
 
 const OPENAI_KEY = process.env.NEXT_CHATGPT_API_KEY || '';
-const MODEL = process.env.AI_MODEL || 'gpt-5';
+// Use a valid default; can be overridden by AI_MODEL
+const MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
 
 function toText(val) {
   if (val == null) return '';
@@ -52,8 +53,16 @@ async function generateReply({ form, settings }) {
       { role: 'user', content: user }
     ],
     temperature: 0.6,
-    max_tokens: Number(process.env.AI_MAX_TOKENS || 200),
   };
+
+  // Newer "o" family models (e.g., gpt-4o, gpt-4o-mini) require max_completion_tokens
+  const newTokenParam = /(^gpt-4o|^o\d|^gpt-4\.1|^gpt-4o-mini)/i.test(MODEL);
+  const max = Number(process.env.AI_MAX_TOKENS || 200);
+  if (newTokenParam) {
+    payload.max_completion_tokens = max;
+  } else {
+    payload.max_tokens = max;
+  }
 
   try {
     await logEvent('ai.generate.request', { model: MODEL });
